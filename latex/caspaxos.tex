@@ -1,0 +1,50 @@
+\documentclass[12pt]{article}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{fontspec}
+\setmainfont[Ligatures=TeX]{Liberation Serif}
+\setsansfont{Liberation Sans}
+\setmonofont{Liberation Mono}
+
+\usepackage{polyglossia}
+\setdefaultlanguage{english}
+
+\usepackage[colorlinks=true,urlcolor=blue,linkcolor=blue]{hyperref}
+
+\begin{document}
+
+\title{CASPaxos: a distributed state machine without log}
+\date{30 January 2018}
+\author{Denis Rystsov \\
+\href{mailto:rystsov.denis@gmail.com}{rystsov.denis@gmail.com}}
+
+
+\maketitle
+
+\begin{abstract}
+Some abstract
+\end{abstract}
+
+
+\section{Paxos}
+
+Some body
+
+\newpage
+
+\begin{thebibliography}{9}
+
+\bibitem{lamport01}
+  Leslie Lamport,
+  \emph{"Paxos Made Simple"}.
+  2001.
+
+\bibitem{raft}
+  Diego Ongaro, John Ousterhout
+  \emph{"In Search of an Understandable Consensus Algorithm"}.
+  2013.
+
+\end{thebibliography}
+
+\end{document}

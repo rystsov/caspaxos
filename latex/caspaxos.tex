@@ -14,7 +14,7 @@
 
 \begin{document}
 
-\title{CASPaxos: a distributed state machine without log}
+\title{CASPaxos: Replicated State Machines without logs}
 \date{30 January 2018}
 \author{Denis Rystsov \\
 \href{mailto:rystsov.denis@gmail.com}{rystsov.denis@gmail.com}}
@@ -23,7 +23,11 @@
 \maketitle
 
 \begin{abstract}
-Some abstract
+CASPaxos is a Single Decree Paxos (Synod) based protocol for building a replicated state machine. Unlike Raft and Multi-Paxos, it doesn't use an idea of the leader election and the replicated log, so it avoids associated complexity (e.g. log compaction) and provides graceful performance degradation when replicas are crashed.
+
+The lightweight nature of CASPaxos opens ways for a new application for RSM, e.g. instead of representing a key/value storage as a single RSM; it's possible to run an instance of CASPaxos per key and achieve a result similar to EPaxos.
+
+This paper describes CASPaxos protocol, proves its safety properties, covers cluster membership change and evaluates a CASPaxos-based key/value storage against established consistent databases.
 \end{abstract}
 
 
@@ -44,6 +48,17 @@ Some body
   Diego Ongaro, John Ousterhout
   \emph{"In Search of an Understandable Consensus Algorithm"}.
   2013.
+
+\bibitem{epaxos}
+  Iulian Moraru, David G. Andersen, Michael Kaminsky
+  \emph{"There Is More Consensus in Egalitarian Parliaments"}.
+  2013.
+
+\bibitem{chubby}
+  Tushar Chandra, Robert Griesemer, Joshua Redstone
+  \emph{"Paxos Made Live - An Engineering Perspective"}.
+  2007.
+
 
 \end{thebibliography}
 

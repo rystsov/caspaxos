@@ -1,11 +1,19 @@
 \documentclass[12pt]{article}
 
+\usepackage[toc,page]{appendix}
+
 \usepackage[utf8]{inputenc}
+
+\usepackage{etoolbox}
+\AtBeginEnvironment{quote}{\small}
 
 \usepackage{fontspec}
 \setmainfont[Ligatures=TeX]{Liberation Serif}
 \setsansfont{Liberation Sans}
 \setmonofont{Liberation Mono}
+
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
 
 \usepackage{polyglossia}
 \setdefaultlanguage{english}
@@ -31,9 +39,45 @@ This paper describes CASPaxos protocol, proves its safety properties, covers clu
 \end{abstract}
 
 
-\section{Paxos}
+\section{Introduction}
 
-Some body
+Multi-Paxos\cite{lamport01} and Raft\cite{raft} protocols allow a collection of machines to work as a coherent group - a replicated state machine (RSM). They are proven to preserve liveness when at least $\floor{N/2} + 1$ of $N$ machines are alive and connected, and to preserve safety in the presence of arbitrary crash/recovery of machines and loss of messages.
+
+The problem of keeping RSM work when its nodes are falling apart is isomorphic to the problem of master-master replication of linearizable distributed storage in the presence of arbitrary crashes. So those protocols are widely used in the idustry as a foundation of databases such as Chubby\cite{chubby}, Etcd\footnote{\href{https://github.com/coreos/etcd}{https://github.com/coreos/etcd}}, Spanner\cite{spanner}, etc.
+
+Desprite of the wide adoption there are a lot of indications that the protocols are complex. Diego Ongaro and John Ousterhout, authors of Raft, wrote in their paper:
+
+\begin{quote}
+In an informal survey of attendees at NSDI 2012, we found few people who were comfortable with Paxos, even among seasoned researchers. We struggled with Paxos ourselves; we were not able to understand the complete protocol until after reading several simplified explanations and designing our own alternative protocol, a process that took almost a year
+\end{quote}
+
+Google's enginneers wrote about their expirence of building Paxos-based database in the Chubby paper:
+
+\begin{quote}
+Despite the existing literature in the field, building such a database proved to be non-trivial \ldots{} While Paxos can be described with a page of pseudo-code, our complete implementation contains several thousand lines of C++ code \ldots{} There are significant gaps between the description of the Paxos algorithm and the needs of a real-world system.
+\end{quote}
+
+The complexity of RSM protocols may lead to errors in implementations. Kyle Kingsbury made a comprehensive research\footnote{\href{https://aphyr.com/tags/jepsen}{https://aphyr.com/tags/jepsen}} of distributed consistent databases and found violations of linearizability in almost every database he tested including MongoDB, Etcd, Consul, RethinkDB, VoltDB and CockroachDB.
+
+{\bf Contributions.} I present CASPaxos, a novel protocol for building RSM that avoids complexities of Multi-Paxos and Raft. According to D. Ongaro and J. Ousterhout the complexity of Multi-Paxos comes from the composition rules for instances of the Single-Decree Paxos
+
+\begin{quote}
+We hypothesize that Paxos’ opaqueness derives from its choice of the single-decree subset as its foundation \ldots{} The composition rules for Multi-Paxos add significant additional complexity and subtlety.
+
+One reason is that there is no widely agreedupon algorithm for multi-Paxos. Lamport’s descriptions are mostly about single-decree Paxos; he sketched possible approaches to multi-Paxos, but many details are missing. As a result, practical systems bear little resemblance to Paxos. Each implementation begins with Paxos, discovers the difficulties in implementing it, and then develops a significantly different architecture \ldots{} real implementations are so different from Paxos that the proofs have little value
+\end{quote}
+
+
+
+\section{Overview}
+\subsection{Single Decree Paxos}
+\subsection{CASPaxos: Intuition}
+
+\begin{appendices}
+\section{Proof}
+\href{http://rystsov.info/2015/09/16/how-paxos-works.html}{http://rystsov.info/2015/09/16/how-paxos-works.html}
+\section{FPaxos}
+\end{appendices}
 
 \newpage
 
@@ -58,6 +102,11 @@ Some body
   Tushar Chandra, Robert Griesemer, Joshua Redstone
   \emph{"Paxos Made Live - An Engineering Perspective"}.
   2007.
+
+\bibitem{spanner}
+  Corbett, J. C., Dean, J., Epstein, M., Fikes, A., Frost C., Furman, J.J., Ghemawat, S., Gubarev, A., Heiser, C., Hochschild, P., at al.
+  \emph{"Spanner: Googles globally distributed database"}.
+  2012.
 
 
 \end{thebibliography}

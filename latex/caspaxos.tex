@@ -41,9 +41,9 @@ This paper describes CASPaxos protocol, proves its safety properties, covers clu
 
 \section{Introduction}
 
-Multi-Paxos\cite{lamport01} and Raft\cite{raft} protocols allow a collection of machines to work as a coherent group - a replicated state machine (RSM). They are proven to preserve liveness when at least $\floor{N/2} + 1$ of $N$ machines are alive and connected, and to preserve safety in the presence of arbitrary crash/recovery of machines and loss of messages.
+Multi-Paxos\cite{lamport01} and Raft\cite{raft} protocols allow a collection of machines to work as a coherent group - a replicated state machine (RSM). The protocols preserve liveness when at least $\floor{N/2} + 1$ of $N$ machines are up and connected, preserve safety in the presence of arbitrary crash/recovery and loss of messages.
 
-The problem of keeping RSM work when its nodes are falling apart is isomorphic to the problem of master-master replication of linearizable distributed storage in the presence of arbitrary crashes. So those protocols are widely used in the idustry as a foundation of databases such as Chubby\cite{chubby}, Etcd\footnote{\href{https://github.com/coreos/etcd}{https://github.com/coreos/etcd}}, Spanner\cite{spanner}, etc.
+The problem of keeping RSM work when its nodes are falling apart is isomorphic to the problem of master-master replication of a linearizable distributed storage under the same conditions. So those protocols are widely used in the idustry as a foundation of such databases as Chubby\cite{chubby}, Etcd\footnote{\href{https://github.com/coreos/etcd}{https://github.com/coreos/etcd}}, Spanner\cite{spanner}, etc.
 
 Desprite of the wide adoption there are a lot of indications that the protocols are complex. Diego Ongaro and John Ousterhout, authors of Raft, wrote in their paper:
 
@@ -59,7 +59,7 @@ Despite the existing literature in the field, building such a database proved to
 
 The complexity of RSM protocols may lead to errors in implementations. Kyle Kingsbury made a comprehensive research\footnote{\href{https://aphyr.com/tags/jepsen}{https://aphyr.com/tags/jepsen}} of distributed consistent databases and found violations of linearizability in almost every database he tested including MongoDB, Etcd, Consul, RethinkDB, VoltDB and CockroachDB.
 
-{\bf Contributions.} I present CASPaxos, a novel protocol for building RSM that avoids complexities of Multi-Paxos and Raft. According to D. Ongaro and J. Ousterhout the complexity of Multi-Paxos comes from the composition rules for instances of the Single-Decree Paxos
+{\bf Contributions.} I present CASPaxos, a novel protocol for building RSM that avoids complexities of Multi-Paxos and Raft. Multi-Paxos is RSM built on top of a replicated log in which each log entry is a command. The replicated log is modeled as an array of instances of Single Decree Paxos. According to D. Ongaro and J. Ousterhout its complexity comes from the composition rules:
 
 \begin{quote}
 We hypothesize that Paxos’ opaqueness derives from its choice of the single-decree subset as its foundation \ldots{} The composition rules for Multi-Paxos add significant additional complexity and subtlety.
@@ -67,11 +67,23 @@ We hypothesize that Paxos’ opaqueness derives from its choice of the single-de
 One reason is that there is no widely agreedupon algorithm for multi-Paxos. Lamport’s descriptions are mostly about single-decree Paxos; he sketched possible approaches to multi-Paxos, but many details are missing. As a result, practical systems bear little resemblance to Paxos. Each implementation begins with Paxos, discovers the difficulties in implementing it, and then develops a significantly different architecture \ldots{} real implementations are so different from Paxos that the proofs have little value
 \end{quote}
 
+CASPaxos extends Synod, a write-once distributed register, into a rewritable distributed register (which is isomorphic to a RSM) instead of using it as a building block so there is no composition and the associated complexity.
 
+Acording to an experimental study\cite{raft} and the number of open source implementations\footnote{\href{https://raft.github.io/\#implementations}{https://raft.github.io/\#implementations}} Raft is more understandable than Multi-Paxos. However, its complexity is comparable with the latter: both systems\cite{chubby}\cite{raft} have several thousand of lines of code, both use concepts of leader, leader election, leases, both are based on logs and require log compaction. CASPaxos is significantly simpler: it doesn't have those pieces and its implementation\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is less than 500 lines of code.
+
+Being just an extention of Synod, CASPaxos uses its symmetric peer-to-peer approach and automatically achieves the goals set in the EPaxos\cite{epaxos} paper: (1) optimal commit latency in the wide-area when tolerating one and two failures, under realistic conditions; (2) uniform load balancing across all replicas (thus achieving high throughput); and (3) graceful performance degradation when replicas are slow or crash.
+
+The formal proof is included into appendix, TLA+ models were independently written by Tobias Schottdorf\footnote{\href{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}} and Greg Rogers\footnote{\href{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}} and they didn't reveal any linearizability violation.
+
+In the following sections I describe the CASPaxos protocol, cluster membership change and evaluate a CASPaxos-based key/value storage.
 
 \section{Overview}
 \subsection{Single Decree Paxos}
 \subsection{CASPaxos: Intuition}
+\section{Algorithm}
+\subsection{Cluster membership change}
+\section{Evaluation}
+\section{Conclusion}
 
 \begin{appendices}
 \section{Proof}
@@ -108,6 +120,10 @@ One reason is that there is no widely agreedupon algorithm for multi-Paxos. Lamp
   \emph{"Spanner: Googles globally distributed database"}.
   2012.
 
+\bibitem{fpaxos}
+  Heidi Howard, Dahlia Malkhi, Alexander Spiegelman
+  \emph{Flexible Paxos: Quorum intersection revisited}.
+  2016.
 
 \end{thebibliography}
 

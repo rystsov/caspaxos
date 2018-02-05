@@ -147,7 +147,7 @@ The initialization procedure:
   \item An acceptor:
   \begin{itemize}
     \item Returns a conflict if it already saw a greater ballot number.
-    \item Persists the ballot number as promise and returns a confirmation either with an empty value (if it hasn't accepted any yet) or with a tuple of an accepted value and its ballot number
+    \item Persists the ballot number as a promise and returns a confirmation either with an empty value (if it hasn't accepted any yet) or with a tuple of an accepted value and its ballot number.
   \end{itemize}
   \item The proposer waits for the $F+1$ confirmations
   \begin{itemize}
@@ -163,17 +163,105 @@ The initialization procedure:
   \item The proposer returns the result variable to the client
 \end{enumerate}
 
+A proposer may combine an increasing counter with its numerical ID to generate a tuple (counter, ID) and use it as the ballot number. To compare the ballot tuples we should compare the counter parts and use ID only as a tie breaker. When a proposer recieves a conflict from the acceptors it may fastforward its counter to avoid the conflict for the next request.
+
 \subsection{CASPaxos}
-\subsubsection{1-round trip optimisation}
+
+CASPaxos is about a rewritable distributed register. It stores state, clients change it by submitting a pure function which takes the current state as an argument and yields new as a return value. Out of concurrent requests only one can succeed, once a client gets a confirmation of the change it's guranteed that all future states are its decendants: there exists a chain of changes linking them together.
+
+Just like Synod it's a CP-system and it requires $2F+1$ nodes to tolerate $F$ failures. Just like the Synod it uses the same roles: clients, proposers and acceptors, and a very similar two phase change mechanism.
+
+The change procedure:
+\begin{enumerate}
+  \item A client submits a change function to a proposer.
+  \item The proposer generates a ballot number, $B$, and send a prepare message containing that number to the acceptors.
+  \item An acceptor:
+  \begin{itemize}
+    \item Returns a conflict if it already saw a greater ballot number.
+    \item Persists the ballot number as a promise and returns a confirmation either with an empty value (if it doesn't have any state yet) or with a tuple of a latest value and its ballot number.
+  \end{itemize}
+  \item The proposer waits for the $F+1$ confirmations
+  \begin{itemize}
+    \item The proposer defines the current state as $\emptyset$ if each confirmation contains an empty value; if at least one confirmation contains a tuple then the proposer picks the value of the tuple with the highest ballot number as current state.
+    \item Then it invokes the change function passing the current state as an argument to calculate the new state and sends it with the generated ballot number $B$ as an accept message to the acceptors.
+  \end{itemize}
+  \item An acceptor:
+  \begin{itemize}
+    \item Returns a conflict if it already saw a greater ballot number.
+    \item Erases the promise, marks the recieved (ballot number, value) as the accepted value and returns a confirmation
+  \end{itemize}
+  \item The proposer waits for the $F+1$ confirmations.
+  \item The proposer returns the new state to the client.
+\end{enumerate}
+
+As you can see the change procedure is almost identical to the Synod's initialization procedure. And if we use "$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val\; \mbox{else}\; x$" as the change function then it becomes identical to Synod's attempt to initialize register with the $val$ value.
+
+We may use the following change functions to turn CASPaxos into a distributed compare and set register:
+\begin{enumerate}
+  \item To {\bf initialize} a register with $val_0$ value: "$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; (0, val_0)\; \mbox{else}\; x$"
+  \item To {\bf update} a register to value $val_1$ if the current version is $5$: "$x \to \mbox{if}\; x = (5, \ast) \;\mbox{then}\; (6, val_1)\; \mbox{else}\; x$"
+  \item To {\bf read} a value: "$x \to x$"
+\end{enumerate}
+
+\subsubsection{One-round trip optimisation}
+
+Since the prepare phase doesn't depend on the change function it's possible to piggyback the next prepare message on the current accept message to reduce the number of round trips from to two to one.
+
 \subsubsection{Cluster membership change}
-\subsubsection{WPaxos}
-\section{Evaluation}
+
+From practical perspective it's necessary to have a way to change cluster membership to replace failed nodes. 
+
+CASPaxos’s mechanism for cluster membership change is based on Raft's idea of joint consensus\cite{raft} approach where the majorities of two different configurations overlap during transitions. This allows the cluster to continue operating normally during configuration changes.
+
+The proof of this idea with application to CASPaxos is based of two observation:
+
+\begin{enumerate}
+  \item {\bf Reduced quorums}. The results from the "Flexible Paxos: Quorum intersection revisited"\cite{fpaxos} paper are applicable to CASPaxos (see proof in appendix \ref{appendix:fpaxos}). In particular the majority of confirmations for the prepare and the accept phases isn't necessary and the only requirement is intersection. For example, if the cluster size is $4$ then we can require only $2$ confirmations for the prepare phase if we wait for $3$ confirmations for the accept phase.
+  
+  \item {\bf Filter equivalence} If a change in the behavior of the CASPaxos cluster can be explained by delaying or omitting the messages between the nodes of the cluster then the change doesn't affect consistency since it tolerates the interventions of such kind. It gives freedom in changing the system as long as the change can be modeled as a message filter on top of the unmodified system.
+\end{enumerate}
+
+The protocol for changing the set of acceptors from $A_1 \cdots A_{2f+1}$ to $A_1 \cdots A_{2f+2}$:
+\begin{enumerate}
+  \item Turn on the $A_{2f+2}$ acceptor.
+  \item Connect to each proposer and update its configuration to send the accept messages to the $A_1 \cdots A_{2f+2}$ set of acceptors and to require $f+2$ confirmations.
+  \item Pick any proposer and execute the identity change function $x \to x$.
+  \item Connect to each proposer and update its configuration to send prepare messages to the $A_1 \cdots A_{2f+2}$ set of acceptors and to require $f+2$ confirmations.
+\end{enumerate}
+
+From the perspective of $2f+1$ nodes cluster the second step can be explained with the filter equivalence, so the system keeps being correct. The third step is just a read operation so it doesn't change the correctness either but after it's finished we can treat the system as a valid $2f+2$ nodes cluster with the reduced prepare quorum. The last step switches the system from the reduced to the regular $2f+2$ nodes cluster mode.
+
+The protocol for changing the set of acceptors from $A_1 \cdots A_{2f+2}$ to $A_1 \cdots A_{2f+3}$ is simpler because we can treat $2f+2$ nodes cluster as $2f+3$ nodes cluster where one node is down:
+\begin{enumerate}
+  \item Connect to each proposer and update its configuration to send the prepare \& accept messages to the $A_1 \cdots A_{2f+3}$ set of acceptors.
+  \item Turn on the $A_{2f+3}$ acceptor.
+\end{enumerate}
+
+To reduce the size of the cluster the same steps should be executed in the reverse order.
+
+\subsubsection{Low-latency and high-throughput consensus across WAN deployments}
+
+WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across widearea network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos being an extension of Synod provides flexible quorums capabilities it can benefit from the same idea.
+
+\section{A CASPaxos-based key/value storage}
+
+The lightweight nature of CASPaxos open new simple ways for designing distributed systems with complex behavior. In this section we'll discuss a CASPaxos-based design for a key/value storage and compare a research prototype with established databases.
+
+\subsection{How delete a record}
+\subsection{Evaluation}
+\subsubsection{Fault-tolerance}
+\subsubsection{Performance}
+
 \section{Conclusion}
 
 \begin{appendices}
 \section{Proof}
 \href{http://rystsov.info/2015/09/16/how-paxos-works.html}{http://rystsov.info/2015/09/16/how-paxos-works.html}
+
 \section{FPaxos}
+\label{appendix:fpaxos}
+\href{http://rystsov.info/2015/12/30/read-write-quorums.html}{http://rystsov.info/2015/12/30/read-write-quorums.html}
+
 \end{appendices}
 
 \newpage
@@ -209,6 +297,11 @@ The initialization procedure:
   Heidi Howard, Dahlia Malkhi, Alexander Spiegelman
   \emph{Flexible Paxos: Quorum intersection revisited}.
   2016.
+
+\bibitem{wpaxos}
+  Ailidani Ailijiang, Aleksey Charapko, Murat Demirbas, Tevfik Kosar
+  \emph{WPaxos: Ruling the Archipelago with Fast Consensus}.
+  2017.
 
 \end{thebibliography}
 

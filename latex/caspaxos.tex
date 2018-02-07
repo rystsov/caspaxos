@@ -245,13 +245,47 @@ WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughp
 
 \section{A CASPaxos-based key/value storage}
 
-The lightweight nature of CASPaxos open new simple ways for designing distributed systems with complex behavior. In this section we'll discuss a CASPaxos-based design for a key/value storage and compare a research prototype with established databases.
+The lightweight nature of CASPaxos opens new simple ways for designing distributed systems with complex behavior. In this section we'll discuss a CASPaxos-based design for a key/value storage and compare a research prototype with established databases.
 
-\subsection{How delete a record}
+The Raft paper acknoledges\cite{raft} that EPaxos\cite{epaxos} can achieve higher performance than Raft by using leaderless approach and exploiting commutativity in state machine commands. A key/value storage with independent operations between keys looks like a good case for the EPaxos protocol. However it adds significant complexity.
+
+Alternativly, instead of putting the whole key/value storage under a single RSM and using the commutativity of the commands, we can use lightweight nature of CASPaxos and run a RSM per key to achieve uniform load balancing across all replicas (thus higher throughput).
+
+Gryadka\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is a prototype of distributed key/value storage which uses that approach.
+
+\subsection{How to delete a record}
+
+The proposed variant of CASPaxos supports only update (change) operation so to delete a value a client should update a register with an empty value. The downside of this approach is the space inefficiency, even when the value is empty the system still spends space to maintain information about the register: a promise and an associated ballot number.
+
+A straightforward removal of this information may introduce consistency issues. Consider the following state of the acceptors.
+
+\begin{figure}[!h]
+  \centering
+  \begin{tabular}{ r|r|r|r }
+    & Promise & Ballot & State \\ \hline
+    Acceptor A && 2 & 42 \\
+    Acceptor B && 3 & $\emptyset$ \\
+    Acceptor C && 3 & $\emptyset$ \\
+  \end{tabular}
+\end{figure}
+
+According to the CASPaxos propocol a read operation (implemented as $x \to x$ change function) should return $\emptyset$. However, if we decide to remove all the information accociated with the register and a request hits the system during the removal when the data on acceptors B and C has already gone then the outcome is $42$ which violates linearizability.
+
+An incresing of accept quorum to $2F+1$ on writing an empty value before the removal solves the problem but it makes the system less available. A multi-step removal process can be used to avoid the availability impact.
+
+\begin{enumerate}
+  \item On a delete request a system writes an empty value with regular $F+1$ accept-quorum, schedules a garbage collection operation and confirms the request to a client.
+  \item The garbage collection operation:
+  \begin{enumerate}
+    \item Replcates an empty value to all nodes by reading it with $2F+1$ quorum size.
+    \item Removes the empty register from every acceptor.
+  \end{enumerate}
+\end{enumerate}
+
 \subsection{Evaluation}
 \subsubsection{Fault-tolerance}
-\subsubsection{Performance}
 
+\subsubsection{Performance}
 \section{Conclusion}
 
 \begin{appendices}

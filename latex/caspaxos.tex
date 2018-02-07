@@ -64,7 +64,7 @@ Despite the existing literature in the field, building such a database proved to
 
 The complexity of RSM protocols may lead to errors in implementations. Kyle Kingsbury made a comprehensive research\footnote{\href{https://aphyr.com/tags/jepsen}{https://aphyr.com/tags/jepsen}} of distributed consistent databases and found violations of linearizability in almost every database he tested including MongoDB, Etcd, Consul, RethinkDB, VoltDB and CockroachDB.
 
-{\bf Contributions.} I present CASPaxos, a novel protocol for building RSM that avoids complexities of Multi-Paxos and Raft. Multi-Paxos is RSM built on top of a replicated log in which each log entry is a command. The replicated log is modelled as an array of instances of Single Decree Paxos. According to D. Ongaro and J. Ousterhout its complexity comes from the composition rules:
+{\bf Contributions.} I present CASPaxos, a novel protocol for building RSM that avoids complexities of Multi-Paxos and Raft. Multi-Paxos is RSM built on top of a replicated log in which each log entry is a command. The replicated log is modelled as an array of instances of Single Decree Paxos. According to D. Ongaro and J. Ousterhout, its complexity comes from the composition rules:
 
 \begin{quote}
 We hypothesize that Paxos’ opaqueness derives from its choice of the single-decree subset as its foundation \ldots{} The composition rules for Multi-Paxos add significant additional complexity and subtlety.
@@ -78,7 +78,7 @@ According to an experimental study\cite{raft} and the number of open source impl
 
 Being just an extension of Synod, CASPaxos uses its symmetric peer-to-peer approach and automatically achieves the goals set in the EPaxos\cite{epaxos} paper: (1) optimal commit latency in the wide-area when tolerating one and two failures, under realistic conditions; (2) uniform load balancing across all replicas (thus achieving high throughput); and (3) graceful performance degradation when replicas are slow or crash.
 
-The formal proof is included into the appendix, TLA+ models were independently written by Tobias Schottdorf\footnote{\href{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}} and Greg Rogers\footnote{\href{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}} and they didn't reveal any linearizability violation.
+The formal proof is included into the appendix, Tobias Schottdorf\footnote{\href{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}} and Greg Rogers\footnote{\href{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}} independently wrote TLA+ models, and they didn't reveal any linearizability violation.
 
 In the following sections, I describe the CASPaxos protocol, cluster membership change and evaluate a CASPaxos-based key/value storage.
 
@@ -88,13 +88,13 @@ We begin by briefly describing the Synod protocol from the perspective of master
 
 \subsection{Synod}
 
-Synod protocol allows to build a distributed register which a client can initialize only once. If several clients try to initialize a register concurrently then the requests either prevent each other from continuing or a single initialization succeeds. Once a client recieved confirmation all the follow up initializations must result with a conflict and return the initialized value.
+Synod protocol allows building a distributed register which a client can initialize only once. If several clients try to initialize a register concurrently, then the requests either prevent each other from continuing, or a single initialization succeeds. Once a client receives confirmation, all the follow-up initializations must result in a conflict and return the initialized value.
 
-The system belongs to the CP-specter of CAP theorem and keeps working without compromising safety when at least $\floor{N/2} + 1$ of $N$ nodes are up and connected; with more failures it compromises availability.
+The system belongs to the CP-specter of CAP theorem and keeps working without compromising safety when at least $\floor{N/2} + 1$ of $N$ nodes are up and connected; with more failures, it gives up availability.
 
 The roles of nodes in the system:
 \begin{enumerate}
-  \item {\bf Clients} initiate a request by communicating with a proposer, client may be stateless, the system may have arbitrary numbers of clients.
+  \item {\bf Clients} initiate a request by communicating with a proposer; clients may be stateless, the system may have arbitrary numbers of clients.
   \item {\bf Proposers} perform the initialization by communicating with acceptors. Proposers keep state to generate unique increasing update ID (ballot number), the system may have arbitrary numbers of proposers.
   \item {\bf Acceptors} store the accepted value, the system should have $2F+1$ acceptor to tolerate $F$ failures.
 \end{enumerate}
@@ -157,19 +157,19 @@ The initialization procedure:
   \item An acceptor:
   \begin{itemize}
     \item Returns a conflict if it already saw a greater ballot number.
-    \item Erases the promise, marks the recieved (ballot number, value) as the accepted value and returns a confirmation
+    \item Erases the promise, marks the received tuple (ballot number, value) as the accepted value and returns a confirmation
   \end{itemize}
   \item The proposer waits for the $F+1$ confirmations
   \item The proposer returns the result variable to the client
 \end{enumerate}
 
-A proposer may combine an increasing counter with its numerical ID to generate a tuple (counter, ID) and use it as the ballot number. To compare the ballot tuples we should compare the counter parts and use ID only as a tie breaker. When a proposer recieves a conflict from the acceptors it may fastforward its counter to avoid the conflict for the next request.
+A proposer may combine an increasing counter with its numerical ID to generate a tuple (counter, ID) and use it as the ballot number. To compare the ballot tuples, we should compare the counter parts and use ID only as a tiebreaker. When a proposer receives a conflict from the acceptors, it may fast-forward its counter to avoid a conflict on the next request.
 
 \subsection{CASPaxos}
 
-CASPaxos is about a rewritable distributed register. It stores state, clients change it by submitting a pure function which takes the current state as an argument and yields new as a return value. Out of concurrent requests only one can succeed, once a client gets a confirmation of the change it's guranteed that all future states are its decendants: there exists a chain of changes linking them together.
+CASPaxos is a rewritable distributed register. It stores state, clients change it by submitting a pure function which takes the current state as an argument and yields new as a return value. Out of concurrent requests only one can succeed, once a client gets a confirmation of the change it's guaranteed that all future states are its descendants: there exists a chain of changes linking them together.
 
-Just like Synod it's a CP-system and it requires $2F+1$ nodes to tolerate $F$ failures. Just like the Synod it uses the same roles: clients, proposers and acceptors, and a very similar two phase change mechanism.
+Just like Synod, it's a CP-system, and it requires $2F+1$ nodes to tolerate $F$ failures. Just like the Synod, it uses the same roles: clients, proposers and acceptors, and a very similar two phase change mechanism.
 
 The change procedure:
 \begin{enumerate}
@@ -178,23 +178,23 @@ The change procedure:
   \item An acceptor:
   \begin{itemize}
     \item Returns a conflict if it already saw a greater ballot number.
-    \item Persists the ballot number as a promise and returns a confirmation either with an empty value (if it doesn't have any state yet) or with a tuple of a latest value and its ballot number.
+    \item Persists the ballot number as a promise and returns a confirmation either with an empty value (if it doesn't have any state yet) or with a tuple of the latest value and its ballot number.
   \end{itemize}
   \item The proposer waits for the $F+1$ confirmations
   \begin{itemize}
-    \item The proposer defines the current state as $\emptyset$ if each confirmation contains an empty value; if at least one confirmation contains a tuple then the proposer picks the value of the tuple with the highest ballot number as current state.
+    \item The proposer defines the current state as $\emptyset$ if each confirmation contains an empty value; if at least one confirmation contains a tuple, then the proposer picks the value of the tuple with the highest ballot number as the current state.
     \item Then it invokes the change function passing the current state as an argument to calculate the new state and sends it with the generated ballot number $B$ as an accept message to the acceptors.
   \end{itemize}
   \item An acceptor:
   \begin{itemize}
     \item Returns a conflict if it already saw a greater ballot number.
-    \item Erases the promise, marks the recieved (ballot number, value) as the accepted value and returns a confirmation
+    \item Erases the promise, marks the received tuple (ballot number, value) as the accepted value and returns a confirmation
   \end{itemize}
   \item The proposer waits for the $F+1$ confirmations.
   \item The proposer returns the new state to the client.
 \end{enumerate}
 
-As you can see the change procedure is almost identical to the Synod's initialization procedure. And if we use "$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val\; \mbox{else}\; x$" as the change function then it becomes identical to Synod's attempt to initialize register with the $val$ value.
+As you can see, the change procedure is almost identical to the Synod's initialization procedure. And if we use "$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val\; \mbox{else}\; x$" as the change function then it becomes identical to Synod's attempt to initialize register with the $val$ value.
 
 We may use the following change functions to turn CASPaxos into a distributed compare and set register:
 \begin{enumerate}
@@ -203,22 +203,22 @@ We may use the following change functions to turn CASPaxos into a distributed co
   \item To {\bf read} a value: "$x \to x$"
 \end{enumerate}
 
-\subsubsection{One-round trip optimisation}
+\subsubsection{One-round trip optimization}
 
-Since the prepare phase doesn't depend on the change function it's possible to piggyback the next prepare message on the current accept message to reduce the number of round trips from to two to one.
+Since the prepare phase doesn't depend on the change function, it's possible to piggyback the next prepare message on the current accept message to reduce the number of round trips from to two to one.
 
 \subsubsection{Cluster membership change}
 
-From practical perspective it's necessary to have a way to change cluster membership to replace failed nodes. 
+From a practical perspective, it's necessary to have a way to change cluster membership to replace failed nodes. 
 
 CASPaxos’s mechanism for cluster membership change is based on Raft's idea of joint consensus\cite{raft} approach where the majorities of two different configurations overlap during transitions. This allows the cluster to continue operating normally during configuration changes.
 
-The proof of this idea with application to CASPaxos is based of two observation:
+The proof of this idea with application to CASPaxos is based on two observation:
 
 \begin{enumerate}
-  \item {\bf Reduced quorums}. The results from the "Flexible Paxos: Quorum intersection revisited"\cite{fpaxos} paper are applicable to CASPaxos (see proof in appendix \ref{appendix:fpaxos}). In particular the majority of confirmations for the prepare and the accept phases isn't necessary and the only requirement is intersection. For example, if the cluster size is $4$ then we can require only $2$ confirmations for the prepare phase if we wait for $3$ confirmations for the accept phase.
+  \item {\bf Reduced quorums}. The results from the "Flexible Paxos: Quorum intersection revisited"\cite{fpaxos} paper are applicable to CASPaxos (see proof in appendix \ref{appendix:fpaxos}). In particular, the majority of confirmations for the "prepare" and the "accept" phases isn't necessary, and the only requirement is an intersection. For example, if the cluster size is $4$ then we can require only $2$ confirmations for the prepare phase if we wait for $3$ confirmations for the accept phase.
   
-  \item {\bf Filter equivalence} If a change in the behavior of the CASPaxos cluster can be explained by delaying or omitting the messages between the nodes of the cluster then the change doesn't affect consistency since it tolerates the interventions of such kind. It gives freedom in changing the system as long as the change can be modeled as a message filter on top of the unmodified system.
+  \item {\bf Filter equivalence} If a change in the behaviour of the CASPaxos cluster can be explained by delaying or omitting the messages between the nodes of the cluster then the change doesn't affect consistency since it tolerates the interventions of such kind. It gives freedom in changing the system as long as the change can be modelled as a message filter on top of the unmodified system.
 \end{enumerate}
 
 The protocol for changing the set of acceptors from $A_1 \cdots A_{2f+1}$ to $A_1 \cdots A_{2f+2}$:
@@ -229,7 +229,7 @@ The protocol for changing the set of acceptors from $A_1 \cdots A_{2f+1}$ to $A_
   \item Connect to each proposer and update its configuration to send prepare messages to the $A_1 \cdots A_{2f+2}$ set of acceptors and to require $f+2$ confirmations.
 \end{enumerate}
 
-From the perspective of $2f+1$ nodes cluster the second step can be explained with the filter equivalence, so the system keeps being correct. The third step is just a read operation so it doesn't change the correctness either but after it's finished we can treat the system as a valid $2f+2$ nodes cluster with the reduced prepare quorum. The last step switches the system from the reduced to the regular $2f+2$ nodes cluster mode.
+From the perspective of $2f+1$ nodes cluster, the second step can be explained with the filter equivalence, so the system keeps being correct. The third step is just a read operation, so it doesn't change the correctness either, but after it's finished we can treat the system as a valid $2f+2$ nodes cluster with the reduced prepare quorum. The last step switches the system from the reduced to the regular $2f+2$ nodes cluster mode.
 
 The protocol for changing the set of acceptors from $A_1 \cdots A_{2f+2}$ to $A_1 \cdots A_{2f+3}$ is simpler because we can treat $2f+2$ nodes cluster as $2f+3$ nodes cluster where one node is down:
 \begin{enumerate}
@@ -237,19 +237,19 @@ The protocol for changing the set of acceptors from $A_1 \cdots A_{2f+2}$ to $A_
   \item Turn on the $A_{2f+3}$ acceptor.
 \end{enumerate}
 
-To reduce the size of the cluster the same steps should be executed in the reverse order.
+To reduce the size of the cluster, the same steps should be executed in the reverse order.
 
 \subsubsection{Low-latency and high-throughput consensus across WAN deployments}
 
-WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across widearea network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos being an extension of Synod provides flexible quorums capabilities it can benefit from the same idea.
+WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across wide area network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos being an extension of Synod provides flexible quorums capabilities it can benefit from the same idea.
 
 \section{A CASPaxos-based key/value storage}
 
-The lightweight nature of CASPaxos opens new simple ways for designing distributed systems with complex behavior. In this section we'll discuss a CASPaxos-based design for a key/value storage and compare a research prototype with established databases.
+The lightweight nature of CASPaxos opens new simple ways for designing distributed systems with complex behaviour. In this section, we'll discuss a CASPaxos-based design for a key/value storage and compare a research prototype with established databases.
 
-The Raft paper acknoledges\cite{raft} that EPaxos\cite{epaxos} can achieve higher performance than Raft by using leaderless approach and exploiting commutativity in state machine commands. A key/value storage with independent operations between keys looks like a good case for the EPaxos protocol. However it adds significant complexity.
+The Raft paper acknoledges\cite{raft} that EPaxos\cite{epaxos} can achieve higher performance than Raft by using leaderless approach and exploiting commutativity in state machine commands. A key/value storage with independent operations between keys looks like a good case for the EPaxos protocol. However, it adds significant complexity.
 
-Alternativly, instead of putting the whole key/value storage under a single RSM and using the commutativity of the commands, we can use lightweight nature of CASPaxos and run a RSM per key to achieve uniform load balancing across all replicas (thus higher throughput).
+Alternatively, instead of putting the whole key/value storage under a single RSM and using the commutativity of the commands, we can use lightweight nature of CASPaxos and run a RSM per key to achieving uniform load balancing across all replicas (thus higher throughput).
 
 Gryadka\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is a prototype of distributed key/value storage which uses that approach.
 
@@ -269,9 +269,9 @@ A straightforward removal of this information may introduce consistency issues. 
   \end{tabular}
 \end{figure}
 
-According to the CASPaxos propocol a read operation (implemented as $x \to x$ change function) should return $\emptyset$. However, if we decide to remove all the information accociated with the register and a request hits the system during the removal when the data on acceptors B and C has already gone then the outcome is $42$ which violates linearizability.
+According to the CASPaxos protocol a read operation (implemented as $x \to x$ change function) should return $\emptyset$. However, if we decide to remove all the information associated with the register and a request hits the system during the removal when the data on acceptors B and C have already gone then the outcome is $42$ which violates linearizability.
 
-An incresing of accept quorum to $2F+1$ on writing an empty value before the removal solves the problem but it makes the system less available. A multi-step removal process can be used to avoid the availability impact.
+An increasing of the "accept" quorum to $2F+1$ on writing an empty value before the removal solves the problem, but it makes the system less available. A multi-step removal process can be used to avoid the availability impact.
 
 \begin{enumerate}
   \item On a delete request a system writes an empty value with regular $F+1$ accept-quorum, schedules a garbage collection operation and confirms the request to a client.

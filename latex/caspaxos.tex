@@ -4,6 +4,13 @@
 
 \usepackage[utf8]{inputenc}
 
+\usepackage{amsthm}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem*{definition}{Definition}
+
 \usepackage{tikz}
 \usetikzlibrary{calc}
 
@@ -290,11 +297,140 @@ An increasing of the "accept" quorum to $2F+1$ on writing an empty value before 
 
 \begin{appendices}
 \section{Proof}
-\href{http://rystsov.info/2015/09/16/how-paxos-works.html}{http://rystsov.info/2015/09/16/how-paxos-works.html}
+\label{appendix:proof}
+
+\begin{theorem} \label{th:proof}
+  We want to prove that for any two acknoledged changes one is always a descendant of another.
+  
+  Let $\bar{E}^2$ represent a set of acknoledged events (a proposer received at least $F+1$ confirmations of an "accept" message) and $\to$ represent the "is a descendant" relation, then we want to demonstrate that
+
+  \begin{equation}
+    \forall x,y \in \bar{E}^2 \;:\; x \to y \lor y \to x
+  \end{equation}
+\end{theorem}
+
+\theoremstyle{definition}
+\begin{definition}{\bf("is a descendant" relation)}
+  What does it mean that one event is a descendant of another? Informally it means that there is a chain of changes changing one state into another. Let's formalize it. We start by defining this relation between the succesfuly accepted messages (denoted as $\ddot{E}^2$) and then expend it to $\bar{E}^2$.
+
+  By definition of a proposer any accepted state is a function of previously accepted state, so
+  
+  \begin{equation} \label{eq:chain}
+    \forall x \in \ddot{E}^2 \quad \exists ! f \quad \exists ! y \in \ddot{E}^2 : s(x) = f(s(y))
+  \end{equation}
+  
+  Where $s(x)$ is a state accepted by an acceptor resulting in event $x$. When \ref{eq:chain} holds for $x$ and $y$ we write $y \sim x$ and $y = I^{-1}(x)$. Now we can define "is a descendant" relation between $\ddot{E}^2$ events as:
+  
+  \begin{equation}
+    \forall x \in \ddot{E}^2 \; \forall x \in \ddot{E}^2 \;:\; x \to y \equiv x \sim y \lor (\exists z \in \ddot{E}^2 \;:\; x \to z \land z \to y)
+  \end{equation}
+  
+  Let's define $x.w$ for $x \in \bar{E}^2$ as events which correspond to the confirmations of an accept message. By definition the following properties are true:
+  \begin{enumerate}
+    \item $\forall x \in \bar{E}^2 \; x.w \subset \ddot{E}^2$
+    \item $\forall x \in \bar{E}^2 \; |x.w| >= F+1$ (we require a quorum of confirmations before acknoledging a change)
+    \item $\forall x \in \bar{E}^2 \; \forall y \in x.w \;:\; s(x) = s(y)$ (accepted state and acknoledged state is the same)
+  \end{enumerate}
+  
+  The third property allows to continue "is a descendant" relation on $\bar{E}^2$:
+  
+  \begin{equation}
+    \forall x \in \bar{E}^2 \; \forall x \in \bar{E}^2 \;:\; x \to y \equiv (\forall a \in x.w \; \forall b \in y.w \; a \to b)
+  \end{equation}
+\end{definition}
+
+\begin{lemma}
+  The following statement proves the theorem \ref{th:proof}.
+
+  \begin{equation} \label{eq:step}
+    \forall x \in \bar{E}^2 \; \forall y \in \ddot{E}^2 \;:\; x.b < y.b \implies x.b \leq I^{-1}(y).b
+  \end{equation}
+
+  Where $x.b$ means a ballot number of an acknoledment or confirmation depending on type $x$.
+\end{lemma}
+
+\begin{proof}
+  Let $z_0 = y$ and $z_{n+1} = I^{-1}(z_{n})$. By definition ballot numbers only increase: $z_{n+1}.b < z_{n}.b$, so we can use mathematical induction and \ref{eq:step} guarantees that $\exists k \;:\; z_k.b = x.b$ meaning $s(z_k) = s(x)$. Since $z_{k+1} \sim z_k$ we proved the following statement:
+
+  \begin{equation} \label{eq:bd}
+    \forall x \in \bar{E}^2 \; \forall y \in \ddot{E}^2 \;:\; x.b < y.b \implies x \to y
+  \end{equation}
+
+  Since $\forall y \in \bar{E}^2 \; \forall z \in y.w \;:\; y.b=z.b \land s(y)=s(z)$ then \ref{eq:bd} implies
+
+  \begin{equation}
+    \forall x \in \bar{E}^2 \; \forall y \in \bar{E}^2 \;:\; x.b < y.b \implies x \to y
+  \end{equation}
+
+  By definition, $\forall x \in \bar{E}^2 \; \forall y \in \bar{E}^2 \;:\; x.b < y.b \lor y.b < x.b$ so the latter means
+
+  \begin{equation}
+    \forall x \in \bar{E}^2 \; \forall y \in \bar{E}^2 \;:\; x \to y \lor y \to x
+  \end{equation}
+
+  Which proofs the theorem \ref{th:proof}.
+\end{proof}
+
+Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised events (prepare phase) and $x.r$ as for $x \in \ddot{E}^2$ as events which correspond to the confirmations of an prepare message. By definition the following properties hold:
+\begin{enumerate}
+  \item $\forall x \in \ddot{E}^2 \; x.r \subset \ddot{E}^1$
+  \item $\forall x \in \ddot{E}^2 \; |x.r| >= F+1$ (we require a quorum of confirmations before staring the accept phase)
+\end{enumerate}.
+
+\begin{theorem} \label{th:proof2}
+  $$\forall x \in \bar{E}^2 \; \forall y \in \ddot{E}^2 \;:\; x.b < y.b \implies x.b \leq I^{-1}(y).b$$
+\end{theorem}
+
+\begin{proof}
+  Let
+  
+  $$N = \{z.node \;|\; z \in x.w\} \cap \{z.node \;|\; z \in y.r\}$$
+
+  $N$ isn't empty because $x.w$ intersects with $y.r$. Let $n \in N$, and $w \equiv x.w |_n$ and $u \equiv y.r |_n$ are accepted and promised events on node $n$. We know that event $w$ happened before $u$ in $n$'s timeframe because an acceptor doesn't accept messages with lesser ballot numbers than they already saw and $w.b = x.b < y.b = u.b$ implies
+
+  \begin{equation}
+    w.b < u.b
+  \end{equation}
+
+  Let "promise" events $P$ have the following structure $\{ \mbox{ts}, \mbox{b}, \mbox{ret} : \{ \mbox{b}, \mbox{s} \} \}$ where ts - local time, b - promised ballot number, ret.b - a ballot number of the accepted state and ret.s is the state itself. "accept" events $A$'s structure is  $\{ \mbox{ts}, \mbox{b}, \mbox{s} \}$.
+
+  By definition "promise" confirmation returns the most latest state, let's write it formaly
+
+  \begin{equation} \label{eq:last}
+    \forall k \in P \; k.ret.b = \max \{ l.b \;|\;l \in A \land l.ts < k.ts \} \\
+  \end{equation}
+
+  Since $w.b < u.b$, $w \in A$ and $u \in P$
+
+  \begin{equation}
+    w \in \{ z \in A, z.ts < u.ts \}
+  \end{equation}
+
+  With combination with \ref{eq:last} it implies:
+
+  \begin{equation} \label{eq:final}
+    x.b = w.b \leq \max \{ z \in A, z.ts < u.ts \} = u.ret.b
+  \end{equation}
+
+  By definition we pick a state with max ballot number out of quorum of promise confirmations as current state so:
+
+  \begin{equation}
+    I^{-1}(y).b = \max \{ z.ret.b | z \in y.r \}
+  \end{equation}
+
+  Combining with \ref{eq:final} we get:
+
+  \begin{equation}
+    x.b = w.b \leq \max \{ z \in A, z.ts < u.ts \} = u.ret.b \leq \max \{ z.ret.b | z \in y.r \} = I^{-1}(y).b
+  \end{equation}
+
+  Which proves $x.b \leq I^{-1}(y).b$.
+
+\end{proof}
 
 \section{FPaxos}
 \label{appendix:fpaxos}
-\href{http://rystsov.info/2015/12/30/read-write-quorums.html}{http://rystsov.info/2015/12/30/read-write-quorums.html}
+In the proof of CASPaxos \ref{appendix:proof} we didn't use the size of the promise/accept quorums and only used thier intersection, so the same proof proves FPaxos observation too.
 
 \end{appendices}
 

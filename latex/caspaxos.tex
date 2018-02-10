@@ -43,27 +43,26 @@
 \maketitle
 
 \begin{abstract}
-CASPaxos is a Single Decree Paxos (Synod) based protocol for building a replicated state machine. Unlike Raft and Multi-Paxos, it doesn't use an idea of the leader election and the replicated log, so it avoids associated complexity (e.g. log compaction) and provides graceful performance degradation when replicas are crashed.
+CASPaxos is a replicated state machine (RSM) protocol, an extension of Single Decree Paxos (Synod) protocol. Unlike Raft and Multi-Paxos, it doesn't use leader election and log replication, so it avoids associated complexity such as log compaction and doesn't have latency issues when a leader crashes.
 
-The lightweight nature of CASPaxos opens ways for a new application for RSM, e.g. instead of representing a key/value storage as a single RSM; it's possible to run an instance of CASPaxos per key and achieve a result similar to EPaxos.
+The lightweight nature of CASPaxos creates new applications for RSM, e.g. instead of representing a key/value storage as a single RSM; it's possible to run an instance of CASPaxos per key to better fault tolerance and better performace on multi-core systems.
 
-This paper describes CASPaxos protocol, proves its safety properties, covers cluster membership change and evaluates a CASPaxos-based key/value storage against established consistent databases.
+This paper describes CASPaxos protocol, formally proves its safety properties, covers cluster membership change and evaluates a CASPaxos-based key/value storage.
 \end{abstract}
-
 
 \section{Introduction}
 
-Multi-Paxos\cite{lamport01} and Raft\cite{raft} protocols allow a collection of machines to work as a coherent group - a replicated state machine (RSM). The protocols preserve liveness when at least $\floor{N/2} + 1$ of $N$ machines are up and connected, preserve safety in the presence of arbitrary crash/recovery and loss of messages.
+Multi-Paxos\cite{lamport01} and Raft\cite{raft} protocols allow a collection of machines to work as a state machine tolerating failures and network issues. The protocols preserve liveness when at least $\floor{N/2} + 1$ of $N$ machines are up and connected and preserve safety in the presence of arbitrary crash/recovery and loss of messages.
 
-The problem of keeping RSM work when its nodes are falling apart is isomorphic to the problem of master-master replication of a linearizable distributed storage under the same conditions. So those protocols are widely used in the industry as a foundation of such databases as Chubby\cite{chubby}, Etcd\footnote{\href{https://github.com/coreos/etcd}{https://github.com/coreos/etcd}}, Spanner\cite{spanner}, etc.
+The problem of keeping RSM work when its nodes crach and network is falling apart is isomorphic to the problem of master-master replication of a linearizable distributed storage under the same conditions. So those protocols are widely used in the industry as a foundation of such databases as Chubby\cite{chubby}, Etcd\footnote{\href{https://github.com/coreos/etcd}{https://github.com/coreos/etcd}}, Spanner\cite{spanner}, etc.
 
-Despite the wide adoption, there are a lot of indications that the protocols are complex. Diego Ongaro and John Ousterhout, authors of Raft, wrote in their paper:
+Despite the wide adoption, there are a lot of indications that the protocols are complex and cause availability problem when a leader crashes. Diego Ongaro and John Ousterhout write in "In Search of an Understandable Consensus Algorithm"\cite{raft}:
 
 \begin{quote}
 In an informal survey of attendees at NSDI 2012, we found few people who were comfortable with Paxos, even among seasoned researchers. We struggled with Paxos ourselves; we were not able to understand the complete protocol until after reading several simplified explanations and designing our own alternative protocol, a process that took almost a year
 \end{quote}
 
-Google's engineers wrote about their experience of building a Paxos-based database in the "Paxos Made Live"\cite{chubby} paper:
+Google's engineers write about their experience of building a Paxos-based database in the "Paxos Made Live"\cite{chubby} paper:
 
 \begin{quote}
 Despite the existing literature in the field, building such a database proved to be non-trivial \ldots{} While Paxos can be described with a page of pseudo-code, our complete implementation contains several thousand lines of C++ code \ldots{} There are significant gaps between the description of the Paxos algorithm and the needs of a real-world system.
@@ -71,7 +70,15 @@ Despite the existing literature in the field, building such a database proved to
 
 The complexity of RSM protocols may lead to errors in implementations. Kyle Kingsbury made a comprehensive research\footnote{\href{https://aphyr.com/tags/jepsen}{https://aphyr.com/tags/jepsen}} of distributed consistent databases and found violations of linearizability in almost every database he tested including MongoDB, Etcd, Consul, RethinkDB, VoltDB and CockroachDB.
 
-{\bf Contributions.} I present CASPaxos, a novel protocol for building RSM that avoids complexities of Multi-Paxos and Raft. Multi-Paxos is RSM built on top of a replicated log in which each log entry is a command. The replicated log is modelled as an array of instances of Single Decree Paxos. According to D. Ongaro and J. Ousterhout, its complexity comes from the composition rules:
+The "There Is More Consensus in Egalitarian Parliaments" paper\cite{epaxos} descibes the negative implications of leader-based system which are applicable both to Multi-Paxos and Raft:
+
+\begin{quote}
+traditional Paxos variants are sensitive to both long-term and transient load spikes and network delays that increase latency at the master \ldots{} this single-master optimization can harm availability: if the master fails, the system cannot service requests until a new master is elected \ldots{} Multi-Paxos has high latency because the local replica must forward all commands to the stable leader.
+\end{quote}
+
+{\bf Contributions.} I present CASPaxos, a novel protocol for building RSM that avoids complexities of log based systems.
+
+Multi-Paxos is RSM built on top of a replicated log which treats every log entry as a command. The replicated log is modelled as an array of Synod instances. According to D. Ongaro and J. Ousterhout, its complexity comes from the composition rules:
 
 \begin{quote}
 We hypothesize that Paxos’ opaqueness derives from its choice of the single-decree subset as its foundation \ldots{} The composition rules for Multi-Paxos add significant additional complexity and subtlety.
@@ -81,11 +88,11 @@ One reason is that there is no widely agreed upon algorithm for multi-Paxos. Lam
 
 CASPaxos extends Synod, a write-once distributed register, into a rewritable distributed register (which is isomorphic to a RSM) instead of using it as a building block, so there is no composition and the associated complexity.
 
-According to an experimental study\cite{raft} and the number of open source implementations\footnote{\href{https://raft.github.io/\#implementations}{https://raft.github.io/\#implementations}} Raft is more understandable than Multi-Paxos. However, its complexity is comparable with the latter: both systems\cite{chubby}\cite{raft} have several thousand of lines of code, both use concepts of leader, leader election, leases, both are based on logs and require log compaction. CASPaxos is significantly simpler: it doesn't have those pieces and its implementation\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is less than 500 lines of code.
+According to an experimental study\cite{raft} and the number of open source implementations\footnote{\href{https://raft.github.io/\#implementations}{https://raft.github.io/\#implementations}} Raft succeeded in its goal to be understandable. However, its complexity is still comparable with Multi-PAxos: both systems\cite{chubby}\cite{raft} have several thousand of lines of code, both use concepts of leader election and leases, both are based on logs and require log compaction. CASPaxos is significantly simpler: it doesn't have those pieces and its implementation\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is less than 500 lines of code.
 
 Being just an extension of Synod, CASPaxos uses its symmetric peer-to-peer approach and automatically achieves the goals set in the EPaxos\cite{epaxos} paper: (1) optimal commit latency in the wide-area when tolerating one and two failures, under realistic conditions; (2) uniform load balancing across all replicas (thus achieving high throughput); and (3) graceful performance degradation when replicas are slow or crash.
 
-The formal proof is included into the appendix, Tobias Schottdorf\footnote{\href{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}} and Greg Rogers\footnote{\href{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}} independently wrote TLA+ models, and they didn't reveal any linearizability violation.
+The formal proof is included into the appendix, Tobias Schottdorf\footnote{\href{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}} and Greg Rogers\footnote{\href{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}} model checked protocol with TLA+ models, and an implementation was tested with faults injection methodology.
 
 In the following sections, I describe the CASPaxos protocol, cluster membership change and evaluate a CASPaxos-based key/value storage.
 
@@ -95,13 +102,13 @@ We begin by briefly describing the Synod protocol from the perspective of master
 
 \subsection{Synod}
 
-Synod protocol allows building a distributed register which a client can initialize only once. If several clients try to initialize a register concurrently, then the requests either prevent each other from continuing, or a single initialization succeeds. Once a client receives confirmation, all the follow-up initializations must result in a conflict and return the initialized value.
+An implementation of the Synod protocol is a distributed register which a client can initialize only once. If several clients try to initialize a register concurrently, then the requests either prevent each other from continuing, or a single initialization succeeds. Once a client receives confirmation, all the follow-up initializations must result in a conflict and return the accepted value.
 
-The system belongs to the CP-specter of CAP theorem and keeps working without compromising safety when at least $\floor{N/2} + 1$ of $N$ nodes are up and connected; with more failures, it gives up availability.
+The system belongs to the CP category of the CAP theorem and keeps working without compromising safety when at least $\floor{N/2} + 1$ of $N$ nodes are up and connected; with more failures, it gives up availability.
 
-The roles of nodes in the system:
+The roles of nodes in the system are:
 \begin{enumerate}
-  \item {\bf Clients} initiate a request by communicating with a proposer; clients may be stateless, the system may have arbitrary numbers of clients.
+  \item {\bf Clients} initiate request by communicating with a proposer; clients may be stateless, the system may have arbitrary numbers of clients.
   \item {\bf Proposers} perform the initialization by communicating with acceptors. Proposers keep state to generate unique increasing update ID (ballot number), the system may have arbitrary numbers of proposers.
   \item {\bf Acceptors} store the accepted value, the system should have $2F+1$ acceptor to tolerate $F$ failures.
 \end{enumerate}
@@ -174,11 +181,9 @@ A proposer may combine an increasing counter with its numerical ID to generate a
 
 \subsection{CASPaxos}
 
-CASPaxos is a rewritable distributed register. It stores state, clients change it by submitting a pure function which takes the current state as an argument and yields new as a return value. Out of concurrent requests only one can succeed, once a client gets a confirmation of the change it's guaranteed that all future states are its descendants: there exists a chain of changes linking them together.
+CASPaxos is a rewritable distributed register. It stores state, clients change it by submitting side effect free functions which take the current state as an argument and yield new state as a result. Out of the concurrent requests only one can succeed, once a client gets a confirmation of the change it's guaranteed that all future states are its descendants: there exists a chain of changes linking them together.
 
-Just like Synod, it's a CP-system, and it requires $2F+1$ nodes to tolerate $F$ failures. Just like the Synod, it uses the same roles: clients, proposers and acceptors, and a very similar two phase change mechanism.
-
-The change procedure:
+Just like Synod, it's a CP-system, and it requires $2F+1$ nodes to tolerate $F$ failures. Also it uses the same roles: clients, proposers and acceptors, and a very similar two phase state transition mechanism:
 \begin{enumerate}
   \item A client submits a change function to a proposer.
   \item The proposer generates a ballot number, $B$, and send a prepare message containing that number to the acceptors.
@@ -201,7 +206,7 @@ The change procedure:
   \item The proposer returns the new state to the client.
 \end{enumerate}
 
-As you can see, the change procedure is almost identical to the Synod's initialization procedure. And if we use "$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val\; \mbox{else}\; x$" as the change function then it becomes identical to Synod's attempt to initialize register with the $val$ value.
+As you can see, the state transition is almost identical to the Synod's initialization. And if we use "$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val\; \mbox{else}\; x$" as the change function then it becomes identical to Synod's attempt to initialize register with the $val$ value.
 
 We may use the following change functions to turn CASPaxos into a distributed compare and set register:
 \begin{enumerate}
@@ -209,6 +214,8 @@ We may use the following change functions to turn CASPaxos into a distributed co
   \item To {\bf update} a register to value $val_1$ if the current version is $5$: "$x \to \mbox{if}\; x = (5, \ast) \;\mbox{then}\; (6, val_1)\; \mbox{else}\; x$"
   \item To {\bf read} a value: "$x \to x$"
 \end{enumerate}
+
+With this specialization the protocol becomes almost indistinguishable from Bizur\cite{bizur}.
 
 \subsubsection{One-round trip optimization}
 
@@ -289,11 +296,31 @@ An increasing of the "accept" quorum to $2F+1$ on writing an empty value before 
   \end{enumerate}
 \end{enumerate}
 
-\subsection{Evaluation}
-\subsubsection{Fault-tolerance}
+\subsection{Performance}
 
-\subsubsection{Performance}
+TODO
+
+\subsection{Fault-tolerance}
+
+TODO: same result as EPaxos \& Bizur.
+
+\section{Related Work}
+
+Raft is similar to CASPaxos in its origin: both were created as an attempt to overcome the complexity of Multi-Paxos. However, Raft uses the same concepts as Multi-Paxos like leader election and log replication but rearranges them differently with focus on understandability. CASPaxos chooses different foundation and has less moving parts. As a result its implementation is $\frac{1}{4}$ of Raft's in terms of lines of code. Another CASPaxos's benefit over Raft is its symmetric peer-to-peer approach: an isolation of a node in CASPaxos cluster doesn't impact client but in Raft an isolation of a leader makes the whole cluster unavailable until new leader isn't choosen.
+
+Bizur is a protocol for building key-value storages, it relates to CASPaxos the same way as Synod does. CASPaxos is a replicated state machine which allows clients to submit functions to change its state. By choosing one set of function we specialize it to be a write-once register, Synod; by choosing another set we get a rewritable register, Bizur. Another contribution is the removal procedure. Bizur deletes values (buckets) by creating a tombstone while CASPaxos removes all associated data leading to better space efficiency.
+
+EPaxos is a leaderless variant of Multi-Paxos which allows concurrent execution of non-interfering commands, CASPaxos is also a leaderless protocol but it doesn't allow concurrent state transition. However in some cases it's comparable with EPaxos. For example, a key-value storage with independent key operations can be modeled as a single EPaxos-based RSM or as a system with an instance of CASPaxos per key. Both achieve optimal commit latency, uniform load balancing across all replicas and graceful performance degradation when replicas are slow or crash.
+
 \section{Conclusion}
+
+Desprite log based paxos like consensus protocols are complex and have latency issues during failures they find wide adoption in the industry as a foundation of key. However, when looking closely at the applications many of them are used to implement master-master replicated key-value storages.
+
+CASPaxos is the consensus protocol which overcomes the complexity of log based solutions like Multi-Paxos and Raft and uses symmetric peer to peer approach to avoid the latency issues. The lightweight nature of CASPaxos allows to use it in a key-value storage design wich it simple than EPaxos but provides comparable resiliency guarantees.
+
+The comparative benchmarking with MongoDB and Etcd has shown that CASPaxos is comparable in regular operation and outperforms
+
+The protocol has formal proof, was model checked with TLA+ and a implementation was tested using fault-injection methodology.
 
 \begin{appendices}
 \section{Proof}
@@ -465,12 +492,17 @@ In the proof of CASPaxos \ref{appendix:proof} we didn't use the size of the prom
 
 \bibitem{fpaxos}
   Heidi Howard, Dahlia Malkhi, Alexander Spiegelman
-  \emph{Flexible Paxos: Quorum intersection revisited}.
+  \emph{"Flexible Paxos: Quorum intersection revisited"}.
   2016.
 
 \bibitem{wpaxos}
   Ailidani Ailijiang, Aleksey Charapko, Murat Demirbas, Tevfik Kosar
-  \emph{WPaxos: Ruling the Archipelago with Fast Consensus}.
+  \emph{"WPaxos: Ruling the Archipelago with Fast Consensus"}.
+  2017.
+
+\bibitem{bizur}
+  Ezra N. Hoch, Yaniv Ben-Yehuda, Noam Lewis, Avi Vigder
+  \emph{"Bizur: A Key-value Consensus Algorithm for Scalable File-systems"}.
   2017.
 
 \end{thebibliography}

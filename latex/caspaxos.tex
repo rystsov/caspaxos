@@ -5,6 +5,7 @@
 \usepackage[utf8]{inputenc}
 
 \usepackage{amsthm}
+\usepackage{longtable}
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}[theorem]{Lemma}
@@ -113,6 +114,8 @@ The roles of nodes in the system are:
   \item {\bf Acceptors} store the accepted value, the system should have $2F+1$ acceptor to tolerate $F$ failures.
 \end{enumerate}
 
+It's convient to use tuples as ballot numbers, to generate it a proposer combines an increasing counter with its numerical ID: (counter, ID). To compare ballot tuples, we should compare the counter parts and use ID only as a tiebreaker. When a proposer receives a conflict from a acceptor, it should fast-forward its counter to avoid a conflict on the next request.
+
 \begin{figure}[!h]
   \centering
   \begin{tikzpicture}[y=-1cm]
@@ -154,59 +157,130 @@ The roles of nodes in the system are:
   \end{tikzpicture}
 \end{figure}
 
-The initialization procedure:
-\begin{enumerate}
-  \item A client proposes a value to a proposer.
-  \item The proposer generates a ballot number, $B$, and send a prepare message containing that number to the acceptors.
-  \item An acceptor:
-  \begin{itemize}
-    \item Returns a conflict if it already saw a greater ballot number.
-    \item Persists the ballot number as a promise and returns a confirmation either with an empty value (if it hasn't accepted any yet) or with a tuple of an accepted value and its ballot number.
-  \end{itemize}
-  \item The proposer waits for the $F+1$ confirmations
-  \begin{itemize}
-    \item If they all contain an empty value then the proposer writes "ok" to the result variable and sends an accept message containing the ballot number $B$ and the proposing value to the acceptors.
-    \item If at least one message contains a tuple then the proposer picks the tuple with the highest ballot number, writes ("conflict", the tuple's value) to the result variable and sends an accept message with the generated ballot number $B$ and the tuple's value to the acceptors.
-  \end{itemize}
-  \item An acceptor:
-  \begin{itemize}
-    \item Returns a conflict if it already saw a greater ballot number.
-    \item Erases the promise, marks the received tuple (ballot number, value) as the accepted value and returns a confirmation
-  \end{itemize}
-  \item The proposer waits for the $F+1$ confirmations
-  \item The proposer returns the result variable to the client
-\end{enumerate}
-
-It's convient to use tuples as ballot numbers, to generate it a proposer combines an increasing counter with its numerical ID: (counter, ID). To compare ballot tuples, we should compare the counter parts and use ID only as a tiebreaker. When a proposer receives a conflict from a acceptor, it should fast-forward its counter to avoid a conflict on the next request.
-
 \subsection{CASPaxos}
 
 CASPaxos is a rewritable distributed register. Clients change its state by submitting side effect free functions which take the current state as an argument and yield new state as a result. Out of the concurrent requests only one can succeed, once a client gets a confirmation of the change it's guaranteed that all future states are its descendants: there exists a chain of changes linking them together.
 
-Just like Synod, it's a CP-system, and it requires $2F+1$ nodes to tolerate $F$ failures. Also it uses the same roles: clients, proposers and acceptors, and a very similar two phase state transition mechanism:
-\begin{enumerate}
-  \item A client submits a change function to a proposer.
-  \item The proposer generates a ballot number, $B$, and send a prepare message containing that number to the acceptors.
-  \item An acceptor:
-  \begin{itemize}
-    \item Returns a conflict if it already saw a greater ballot number.
-    \item Persists the ballot number as a promise and returns a confirmation either with an empty value (if it doesn't have any state yet) or with a tuple of the latest value and its ballot number.
-  \end{itemize}
-  \item The proposer waits for the $F+1$ confirmations
-  \begin{itemize}
-    \item The proposer defines the current state as $\emptyset$ if each confirmation contains an empty value; if at least one confirmation contains a tuple, then the proposer picks the value of the tuple with the highest ballot number as the current state.
-    \item Then it invokes the change function passing the current state as an argument to calculate the new state and sends it with the generated ballot number $B$ as an accept message to the acceptors.
-  \end{itemize}
-  \item An acceptor:
-  \begin{itemize}
-    \item Returns a conflict if it already saw a greater ballot number.
-    \item Erases the promise, marks the received tuple (ballot number, value) as the accepted value and returns a confirmation
-  \end{itemize}
-  \item The proposer waits for the $F+1$ confirmations.
-  \item The proposer returns the new state to the client.
-\end{enumerate}
+Just like Synod, it's a CP-system, and it requires $2F+1$ nodes to tolerate $F$ failures. Also it uses the same roles: clients, proposers and acceptors, and a very similar two phase state transition mechanism.
 
-As you can see, the state transition is almost identical to the Synod's initialization. And if we use "$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val\; \mbox{else}\; x$" as the change function then it becomes identical to Synod's attempt to initialize register with the $val$ value.
+\subsection{Details}
+
+Let's review the Synod and CASPaxos algorithms step-by-step to see the similarities between them.
+
+\begin{center}
+\begin{longtable}{p{2em}p{13em}|p{2em}p{13em}} 
+  \hline
+  \multicolumn{2}{p{15em}|}{{\bf Synod}}
+  &
+  \multicolumn{2}{p{15em}}{{\bf CASPaxos}} \\ 
+  \hline
+  \endfirsthead
+  \hline
+  \multicolumn{2}{p{15em}|}{{\bf Synod}}
+  &
+  \multicolumn{2}{p{15em}}{{\bf CASPaxos}} \\ 
+  \hline
+  \endhead
+  \endfoot
+  \endlastfoot
+  
+  \multicolumn{2}{p{15em}|}{A client proposes a value to a proposer.}
+  &
+  \multicolumn{2}{p{15em}}{A client submits a change function to a proposer.} \\
+  
+  \hline
+  
+  \multicolumn{2}{p{15em}|}{The proposer generates a ballot number, $B$, and send a prepare message containing that number to the acceptors.}
+  &
+  \multicolumn{2}{p{15em}}{The proposer generates a ballot number, $B$, and send a prepare message containing that number to the acceptors.} \\
+  
+  \hline
+  
+  \multicolumn{2}{p{15em}|}{An acceptor:}
+  &
+  \multicolumn{2}{p{15em}}{An acceptor:} \\[6pt]
+  
+  %\hline
+  
+  &
+  Returns a conflict if it already saw a greater ballot number.
+  &
+  &
+  Returns a conflict if it already saw a greater ballot number.
+  \\[6pt]
+  
+  %\hline
+  
+  &
+  Persists the ballot number as a promise and returns a confirmation either with an empty value (if it hasn't accepted any value yet) or with a tuple of an accepted value and its ballot number.
+  &
+  &
+  Persists the ballot number as a promise and returns a confirmation either with an empty value (if it hasn't accepted any value yet) or with a tuple of the latest value and its ballot number.
+  \\[6pt]
+  
+  \hline
+  
+  \multicolumn{2}{p{15em}|}{The proposer waits for the $F+1$ confirmations}
+  &
+  \multicolumn{2}{p{15em}}{The proposer waits for the $F+1$ confirmations} \\
+  
+  \hline
+  
+  \multicolumn{2}{p{15em}|}{If they all contain an empty value then the proposer writes "ok" to the result variable and sends an accept message containing the ballot number $B$ and the proposing value to the acceptors.}
+  &
+  \multicolumn{2}{p{15em}}{The proposer defines the current state as $\emptyset$ if each confirmation contains an empty value; if at least one confirmation contains a tuple, then the proposer picks the value of the tuple with the highest ballot number as the current state.}
+  \\
+  
+  \hline
+  
+  \multicolumn{2}{p{15em}|}{If at least one message contains a tuple then the proposer picks the tuple with the highest ballot number, writes ("conflict", the tuple's value) to the result variable and sends an accept message with the generated ballot number $B$ and the tuple's value to the acceptors.}
+  &
+  \multicolumn{2}{p{15em}}{Then it invokes the change function passing the current state as an argument to calculate the new state and sends it with the generated ballot number $B$ as an accept message to the acceptors.}
+  \\
+  
+  \hline
+  
+  \multicolumn{2}{p{15em}|}{An acceptor:}
+  &
+  \multicolumn{2}{p{15em}}{An acceptor:} \\[6pt]
+  
+  %\hline
+  
+  &
+  Returns a conflict if it already saw a greater ballot number.
+  &
+  &
+  Returns a conflict if it already saw a greater ballot number.
+  \\[6pt]
+  
+  %\hline
+  
+  &
+  Erases the promise, marks the received tuple (ballot number, value) as the accepted value and returns a confirmation
+  &
+  &
+  Erases the promise, marks the received tuple (ballot number, value) as the accepted value and returns a confirmation
+  \\[6pt]
+  
+  \hline
+  
+  \multicolumn{2}{p{15em}|}{The proposer waits for the $F+1$ confirmations}
+  &
+  \multicolumn{2}{p{15em}}{The proposer waits for the $F+1$ confirmations.} \\[6pt]
+  
+  \hline
+  
+  \multicolumn{2}{p{15em}|}{The proposer returns the result variable to the client}
+  &
+  \multicolumn{2}{p{15em}}{The proposer returns the new state to the client.} \\[6pt]
+  
+  \hline
+\end{longtable}
+\end{center}
+
+As you can see, the CASPaxos's state transition is almost identical to the Synod's initialization. 
+
+If we use "$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val\; \mbox{else}\; x$" as the change function then it becomes identical to Synod's attempt to initialize the register with the $val$ value.
 
 We may use the following change functions to turn CASPaxos into a distributed compare and set register:
 \begin{enumerate}
@@ -316,19 +390,19 @@ TODO: same result as EPaxos \& Bizur.
 
 \section{Related Work}
 
-Raft is similar to CASPaxos in its origin: both were created as an attempt to overcome the complexity of Multi-Paxos. However, Raft uses the same concepts as Multi-Paxos like leader election and log replication but rearranges them differently with focus on understandability. CASPaxos chooses different foundation and has less moving parts. As a result its implementation is $\frac{1}{4}$ of Raft's in terms of lines of code. Another CASPaxos's benefit over Raft is its symmetric peer-to-peer approach: an isolation of a node in CASPaxos cluster doesn't impact client but in Raft an isolation of a leader makes the whole cluster unavailable until new leader isn't choosen.
+Raft is similar to CASPaxos in its origin: both were created as an attempt to overcome the complexity of Multi-Paxos. Raft uses the same concepts as Multi-Paxos like leader election and log replication but rearranges them differently with focus on understandability. CASPaxos chooses different foundation and has less moving parts. As a result its implementation is $\frac{1}{4}$ of Raft's in terms of lines of code. Symmetric peer-to-peer approach of CASPaxos allows it to experience an isolation of a node without impacting clients, on contarary an isolation of a leader in Raft makes the whole cluster unavailable until new leader isn't elected.
 
-Bizur is a protocol for building key-value storages, it relates to CASPaxos the same way as Synod does. CASPaxos is a replicated state machine which allows clients to submit functions to change its state. By choosing one set of function we specialize it to be a write-once register, Synod; by choosing another set we get a rewritable register, Bizur. Another contribution is the removal procedure. Bizur deletes values (buckets) by creating a tombstone while CASPaxos removes all associated data leading to better space efficiency.
+Bizur is a protocol for building key-value storages, it relates to CASPaxos the same way as Synod does. CASPaxos is a replicated state machine which allows clients to submit functions to change its state. By choosing one set of function we specialize it to be a write-once register, Synod; by choosing another set we get a rewritable register, Bizur. The Bizur paper doesn't specify how to remove values (buckets) other than by creating tombstones which may lead to space inefficiency.
 
-EPaxos is a leaderless variant of Multi-Paxos which allows concurrent execution of non-interfering commands, CASPaxos is also a leaderless protocol but it doesn't allow concurrent state transition. However in some cases it's comparable with EPaxos. For example, a key-value storage with independent key operations can be modeled as a single EPaxos-based RSM or as a system with an instance of CASPaxos per key. Both achieve optimal commit latency, uniform load balancing across all replicas and graceful performance degradation when replicas are slow or crash.
+EPaxos is a leaderless variant of Multi-Paxos which allows concurrent execution of non-interfering commands, CASPaxos is also a leaderless protocol but it doesn't allow concurrent state transition. However in some cases it provides comparable functionality with simpler design. For example, a key-value storage with independent key operations can be modeled as a single EPaxos-based RSM or as a system with an instance of CASPaxos per key. Both system achieve optimal commit latency, uniform load balancing across all replicas and graceful performance degradation when replicas are slow or crash.
 
 \section{Conclusion}
 
-Desprite log based paxos like consensus protocols are complex and have latency issues during failures they find wide adoption in the industry as a foundation of key. However, when looking closely at the applications many of them are used to implement master-master replicated key-value storages.
+Desprite log based paxos like consensus protocols are complex and have latency issues during failures they find wide adoption in the industry as a foundation of distributed databases. However, when looking closely at the applications many of them are used to implement master-master replicated key-value storages.
 
-CASPaxos is the consensus protocol which overcomes the complexity of log based solutions like Multi-Paxos and Raft and uses symmetric peer to peer approach to avoid the latency issues. The lightweight nature of CASPaxos allows to use it in a key-value storage design wich it simple than EPaxos but provides comparable resiliency guarantees.
+CASPaxos is the consensus protocol which overcomes the complexity of log based solutions like Multi-Paxos and Raft and uses symmetric peer to peer approach to avoid the latency issues. The lightweight nature of CASPaxos allows to use it as a foundation of key-value storage with simple design better resiliency guarantees.
 
-The comparative benchmarking with MongoDB and Etcd has shown that CASPaxos is comparable in regular operation and outperforms
+The comparative benchmarking with MongoDB and Etcd has shown that CASPaxos is comparable in stable environment and outperforms during the network incidents.
 
 The protocol has formal proof, was model checked with TLA+ and a implementation was tested using fault-injection methodology.
 

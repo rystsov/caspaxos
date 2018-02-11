@@ -73,7 +73,7 @@ The complexity of RSM protocols may lead to errors in implementations. Kyle King
 The "There Is More Consensus in Egalitarian Parliaments" paper\cite{epaxos} descibes the negative implications of leader-based system which are applicable both to Multi-Paxos and Raft:
 
 \begin{quote}
-traditional Paxos variants are sensitive to both long-term and transient load spikes and network delays that increase latency at the master \ldots{} this single-master optimization can harm availability: if the master fails, the system cannot service requests until a new master is elected \ldots{} Multi-Paxos has high latency because the local replica must forward all commands to the stable leader.
+Traditional Paxos variants are sensitive to both long-term and transient load spikes and network delays that increase latency at the master \ldots{} this single-master optimization can harm availability: if the master fails, the system cannot service requests until a new master is elected \ldots{} Multi-Paxos has high latency because the local replica must forward all commands to the stable leader.
 \end{quote}
 
 {\bf Contributions.} I present CASPaxos, a novel protocol for building RSM that avoids complexities of log based systems.
@@ -177,11 +177,11 @@ The initialization procedure:
   \item The proposer returns the result variable to the client
 \end{enumerate}
 
-A proposer may combine an increasing counter with its numerical ID to generate a tuple (counter, ID) and use it as the ballot number. To compare the ballot tuples, we should compare the counter parts and use ID only as a tiebreaker. When a proposer receives a conflict from the acceptors, it may fast-forward its counter to avoid a conflict on the next request.
+It's convient to use tuples as ballot numbers, to generate it a proposer combines an increasing counter with its numerical ID: (counter, ID). To compare ballot tuples, we should compare the counter parts and use ID only as a tiebreaker. When a proposer receives a conflict from a acceptor, it should fast-forward its counter to avoid a conflict on the next request.
 
 \subsection{CASPaxos}
 
-CASPaxos is a rewritable distributed register. It stores state, clients change it by submitting side effect free functions which take the current state as an argument and yield new state as a result. Out of the concurrent requests only one can succeed, once a client gets a confirmation of the change it's guaranteed that all future states are its descendants: there exists a chain of changes linking them together.
+CASPaxos is a rewritable distributed register. Clients change its state by submitting side effect free functions which take the current state as an argument and yield new state as a result. Out of the concurrent requests only one can succeed, once a client gets a confirmation of the change it's guaranteed that all future states are its descendants: there exists a chain of changes linking them together.
 
 Just like Synod, it's a CP-system, and it requires $2F+1$ nodes to tolerate $F$ failures. Also it uses the same roles: clients, proposers and acceptors, and a very similar two phase state transition mechanism:
 \begin{enumerate}
@@ -221,31 +221,41 @@ With this specialization the protocol becomes almost indistinguishable from Bizu
 
 Since the prepare phase doesn't depend on the change function, it's possible to piggyback the next prepare message on the current accept message to reduce the number of round trips from to two to one.
 
+In this case a proposer caches the last written value and the clients should use that proposer to initiate the state transition to benefit from the optimization.
+
 \subsubsection{Cluster membership change}
 
-From a practical perspective, it's necessary to have a way to change cluster membership to replace failed nodes. 
+Cluster membership change is a process of changing the set of processes executing a distributed system without violating safely and liveness properties of the system. It's crucial to have this process because it solves two problems:
 
-CASPaxos’s mechanism for cluster membership change is based on Raft's idea of joint consensus\cite{raft} approach where the majorities of two different configurations overlap during transitions. This allows the cluster to continue operating normally during configuration changes.
+\begin{enumerate}
+  \item {\it How to change fault tolerance properties of a system}. With time the fault tolerant requirements may change, since a CASPaxos based system of size $N$ tolerates up to $\floor{N/2}$ crashes, a way to increasing/decrease size of a cluster is also a way to increasing/decrease resiliency of the system.
+
+  \item {\it How to replace permanently failed nodes.} CASPaxos tolerates transient failures but when the failures are permanent eventually more than $\floor{N/2}$ nodes crash and the system becomes unavailable. A replacement of a failed node in the $N$ nodes cluster can be modeled as a shrinkage to $N-1$ followed by expansion to $N$.
+\end{enumerate}
+
+The procedure is based on Raft's idea of joint consensus\cite{raft} approach where the majorities of two different configurations overlap during transitions. This allows the cluster to continue operating normally during configuration changes.
 
 The proof of this idea with application to CASPaxos is based on two observation:
 
 \begin{enumerate}
-  \item {\bf Reduced quorums}. The results from the "Flexible Paxos: Quorum intersection revisited"\cite{fpaxos} paper are applicable to CASPaxos (see proof in appendix \ref{appendix:fpaxos}). In particular, the majority of confirmations for the "prepare" and the "accept" phases isn't necessary, and the only requirement is an intersection. For example, if the cluster size is $4$ then we can require only $2$ confirmations for the prepare phase if we wait for $3$ confirmations for the accept phase.
+  \item {\bf Flexible quorums} It has been observed before that in a Paxos based system the only requirement for the "prepare" and "accept" quorums is intersection \cite{abcds}\cite{vertical}\cite{fpaxos}. For example, if the cluster size is $4$ then we may require $2$ confirmations during the "prepare" phase and $3$ during the "accept" phase. The same result is applicable to CASPaxos, see the proof in appendix \ref{appendix:fpaxos}.
   
   \item {\bf Filter equivalence} If a change in the behaviour of the CASPaxos cluster can be explained by delaying or omitting the messages between the nodes of the cluster then the change doesn't affect consistency since it tolerates the interventions of such kind. It gives freedom in changing the system as long as the change can be modelled as a message filter on top of the unmodified system.
 \end{enumerate}
 
-The protocol for changing the set of acceptors from $A_1 \cdots A_{2f+1}$ to $A_1 \cdots A_{2f+2}$:
+The protocol for changing the set of acceptors from $A_1 \cdots A_{2F+1}$ to $A_1 \cdots A_{2F+2}$:
 \begin{enumerate}
-  \item Turn on the $A_{2f+2}$ acceptor.
-  \item Connect to each proposer and update its configuration to send the accept messages to the $A_1 \cdots A_{2f+2}$ set of acceptors and to require $f+2$ confirmations.
+  \item Turn on the $A_{2F+2}$ acceptor.
+  \item Connect to each proposer and update its configuration to send the accept messages to the $A_1 \cdots A_{2F+2}$ set of acceptors and to require $F+2$ confirmations.
   \item Pick any proposer and execute the identity change function $x \to x$.
-  \item Connect to each proposer and update its configuration to send prepare messages to the $A_1 \cdots A_{2f+2}$ set of acceptors and to require $f+2$ confirmations.
+  \item Connect to each proposer and update its configuration to send prepare messages to the $A_1 \cdots A_{2F+2}$ set of acceptors and to require $F+2$ confirmations.
 \end{enumerate}
 
-From the perspective of $2f+1$ nodes cluster, the second step can be explained with the filter equivalence, so the system keeps being correct. The third step is just a read operation, so it doesn't change the correctness either, but after it's finished we can treat the system as a valid $2f+2$ nodes cluster with the reduced prepare quorum. The last step switches the system from the reduced to the regular $2f+2$ nodes cluster mode.
+From the perspective of the $2F+1$ nodes cluster, the second step can be explained with the filter equivalence principle, so the system keeps being correct. After it finishes the system also works as a $2F+2$ nodes cluster with $F+1$ "prepare" quorum and $F+2$ "accept" quorum.
 
-The protocol for changing the set of acceptors from $A_1 \cdots A_{2f+2}$ to $A_1 \cdots A_{2f+3}$ is simpler because we can treat $2f+2$ nodes cluster as $2f+3$ nodes cluster where one node is down:
+After read operation finishes the state of the cluster becomes valid from the $F+2$ perspective and we can forget the about the $F+1$ interpretation. The last step switches the system from the reduced "prepare" quorum to the regular.
+
+The protocol for changing the set of acceptors from $A_1 \cdots A_{2F+2}$ to $A_1 \cdots A_{2F+3}$ is simpler because we can treat a $2F+2$ nodes cluster as a $2F+3$ nodes cluster where one node had been down from the beginning:
 \begin{enumerate}
   \item Connect to each proposer and update its configuration to send the prepare \& accept messages to the $A_1 \cdots A_{2f+3}$ set of acceptors.
   \item Turn on the $A_{2f+3}$ acceptor.
@@ -255,7 +265,7 @@ To reduce the size of the cluster, the same steps should be executed in the reve
 
 \subsubsection{Low-latency and high-throughput consensus across WAN deployments}
 
-WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across wide area network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos being an extension of Synod provides flexible quorums capabilities it can benefit from the same idea.
+WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across wide area network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos being an extension of Synod provides flexible quorums capabilities it can benefit from the same idea too.
 
 \section{A CASPaxos-based key/value storage}
 
@@ -470,6 +480,26 @@ In the proof of CASPaxos \ref{appendix:proof} we didn't use the size of the prom
   \emph{"Paxos Made Simple"}.
   2001.
 
+\bibitem{abcds}
+  Butler W. Lampson
+  \emph{"The ABCDs of Paxos"}.
+  2001.
+
+\bibitem{chubby}
+  Tushar Chandra, Robert Griesemer, Joshua Redstone
+  \emph{"Paxos Made Live - An Engineering Perspective"}.
+  2007.
+
+\bibitem{vertical}
+  Leslie Lamport, Dahlia Malkhi, Lidong Zhou
+  \emph{"Vertical Paxos and Primary-Backup Replication"}
+  2009.
+
+\bibitem{spanner}
+  Corbett, J. C., Dean, J., Epstein, M., Fikes, A., Frost C., Furman, J.J., Ghemawat, S., Gubarev, A., Heiser, C., Hochschild, P., at al.
+  \emph{"Spanner: Googles globally distributed database"}.
+  2012.
+
 \bibitem{raft}
   Diego Ongaro, John Ousterhout
   \emph{"In Search of an Understandable Consensus Algorithm"}.
@@ -479,16 +509,6 @@ In the proof of CASPaxos \ref{appendix:proof} we didn't use the size of the prom
   Iulian Moraru, David G. Andersen, Michael Kaminsky
   \emph{"There Is More Consensus in Egalitarian Parliaments"}.
   2013.
-
-\bibitem{chubby}
-  Tushar Chandra, Robert Griesemer, Joshua Redstone
-  \emph{"Paxos Made Live - An Engineering Perspective"}.
-  2007.
-
-\bibitem{spanner}
-  Corbett, J. C., Dean, J., Epstein, M., Fikes, A., Frost C., Furman, J.J., Ghemawat, S., Gubarev, A., Heiser, C., Hochschild, P., at al.
-  \emph{"Spanner: Googles globally distributed database"}.
-  2012.
 
 \bibitem{fpaxos}
   Heidi Howard, Dahlia Malkhi, Alexander Spiegelman

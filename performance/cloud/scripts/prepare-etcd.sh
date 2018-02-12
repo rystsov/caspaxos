@@ -12,6 +12,8 @@ ln -s /mnt/etcd /etcd
 
 pushd /etcd
 
+mkdir mem
+
 wget https://github.com/coreos/etcd/releases/download/v3.2.13/etcd-v3.2.13-linux-amd64.tar.gz
 tar -xzvf etcd-v3.2.13-linux-amd64.tar.gz
 rm etcd-v3.2.13-linux-amd64.tar.gz

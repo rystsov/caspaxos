@@ -22,8 +22,8 @@ client="http://$myip:2379"
   --data-dir "/etcd/mem/$me" \
   --name $me \
   --initial-advertise-peer-urls $peer \
-  --listen-peer-urls $peer \
-  --listen-client-urls $client \
+  --listen-peer-urls "http://0.0.0.0:2380" \
+  --listen-client-urls "http://0.0.0.0:2379" \
   --advertise-client-urls $client \
   --initial-cluster-token etcd-cluster-1 \
   --initial-cluster $cluster \

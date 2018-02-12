@@ -17,6 +17,8 @@ peer="http://$myip:2380"
 client="http://$myip:2379"
 
 /etcd/etcd-v3.2.13-linux-amd64/etcd \
+  --heartbeat-interval=200 \
+  --election-timeout=2000 \
   --data-dir "/etcd/mem/$me" \
   --name $me \
   --initial-advertise-peer-urls $peer \

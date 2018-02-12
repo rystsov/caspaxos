@@ -8,7 +8,7 @@ apt-get update -y
 apt-get install -y golang-1.9-go
 
 mkdir /mnt/etcd
-ln -s /etcd /mnt/etcd
+ln -s /mnt/etcd /etcd
 
 pushd /etcd
 

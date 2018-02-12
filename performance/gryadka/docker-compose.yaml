@@ -1,0 +1,29 @@
+version: '3'
+services:
+  gryadka1:
+    build: db
+    privileged: true
+    container_name: gryadka1
+    hostname: gryadka1
+    tmpfs: /gryadka/mem
+    networks:
+      - perseus
+  gryadka2:
+    build: db
+    privileged: true
+    container_name: gryadka2
+    hostname: gryadka2
+    tmpfs: /gryadka/mem
+    networks:
+      - perseus
+  gryadka3:
+    build: db
+    privileged: true
+    container_name: gryadka3
+    hostname: gryadka3
+    tmpfs: /gryadka/mem
+    networks:
+      - perseus
+networks:
+  perseus:
+    driver: bridge

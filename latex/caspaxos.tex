@@ -163,9 +163,7 @@ CASPaxos is a rewritable distributed register. Clients change its state by submi
 
 Just like Synod, it's a CP-system, and it requires $2F+1$ nodes to tolerate $F$ failures. Also it uses the same roles: clients, proposers and acceptors, and a very similar two phase state transition mechanism.
 
-\subsection{Details}
-
-Let's review the Synod and CASPaxos algorithms step-by-step to see the similarities between them.
+Let's review the Synod and CASPaxos protocols step-by-step.
 
 \begin{center}
 \begin{longtable}{p{2em}p{13em}|p{2em}p{13em}} 
@@ -307,7 +305,7 @@ Cluster membership change is a process of changing the set of processes executin
   \item {\it How to replace permanently failed nodes.} CASPaxos tolerates transient failures but when the failures are permanent eventually more than $\floor{N/2}$ nodes crash and the system becomes unavailable. A replacement of a failed node in the $N$ nodes cluster can be modeled as a shrinkage to $N-1$ followed by expansion to $N$.
 \end{enumerate}
 
-The procedure is based on Raft's idea of joint consensus\cite{raft} approach where the majorities of two different configurations overlap during transitions. This allows the cluster to continue operating normally during configuration changes.
+The process of changing is based on Raft's idea of joint consensus\cite{raft} where the majorities of two different configurations overlap during transitions. This allows the cluster to continue operating normally during configuration changes.
 
 The proof of this idea with application to CASPaxos is based on two observation:
 

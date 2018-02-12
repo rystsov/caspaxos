@@ -1,0 +1,29 @@
+version: '3'
+services:
+  mongo1:
+    build: db
+    privileged: true
+    container_name: mongo1
+    hostname: mongo1
+    tmpfs: /mongo/mem
+    networks:
+      - perseus
+  mongo2:
+    build: db
+    privileged: true
+    container_name: mongo2
+    hostname: mongo2
+    tmpfs: /mongo/mem
+    networks:
+      - perseus
+  mongo3:
+    build: db
+    privileged: true
+    container_name: mongo3
+    hostname: mongo3
+    tmpfs: /mongo/mem
+    networks:
+      - perseus
+networks:
+  perseus:
+    driver: bridge

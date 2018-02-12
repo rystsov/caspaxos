@@ -1,0 +1,29 @@
+version: '3'
+services:
+  etcd1:
+    build: db
+    privileged: true
+    container_name: etcd1
+    hostname: etcd1
+    tmpfs: /etcd/mem
+    networks:
+      - perseus
+  etcd2:
+    build: db
+    privileged: true
+    container_name: etcd2
+    hostname: etcd2
+    tmpfs: /etcd/mem
+    networks:
+      - perseus
+  etcd3:
+    build: db
+    privileged: true
+    container_name: etcd3
+    hostname: etcd3
+    tmpfs: /etcd/mem
+    networks:
+      - perseus
+networks:
+  perseus:
+    driver: bridge

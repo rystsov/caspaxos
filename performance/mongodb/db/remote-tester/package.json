@@ -1,0 +1,29 @@
+{
+  "name": "perseus-mongodb",
+  "version": "1.0.0",
+  "description": "Perseus is a set of scripts to test how Gryadka behaves when a leader is separated from the peer but maintain connection to the clients",
+  "main": "index.js",
+  "dependencies": {
+    "express": "4.14.0",
+    "body-parser": "1.15.2",
+    "mongodb": "3.0.1",
+    "moment": "2.20.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rystsov/perseus.git"
+  },
+  "keywords": [
+    "gryadka",
+    "raft"
+  ],
+  "author": "Denis Rystsov",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rystsov/perseus/issues"
+  },
+  "homepage": "https://github.com/rystsov/perseus"
+}

@@ -1,0 +1,51 @@
+{
+    "acceptors": { 
+        "a1": { 
+            "storage": {
+                "host": "gryadka1",
+                "port": 6379
+            }, 
+            "accept": "e043ab55a3cdac18d24b3d28e2b456bfc44471ac",
+            "prepare": "c134f76217e439e3bd09e68b4a13984a5ece6d3d",
+            "isTransient": false
+        },
+        "a2": { 
+            "storage": {
+                "host": "gryadka2",
+                "port": 6379
+            }, 
+            "accept": "e043ab55a3cdac18d24b3d28e2b456bfc44471ac",
+            "prepare": "c134f76217e439e3bd09e68b4a13984a5ece6d3d",
+            "isTransient": false
+        },
+        "a3": { 
+            "storage": {
+                "host": "gryadka3",
+                "port": 6379
+            }, 
+            "accept": "e043ab55a3cdac18d24b3d28e2b456bfc44471ac",
+            "prepare": "c134f76217e439e3bd09e68b4a13984a5ece6d3d",
+            "isTransient": false
+        }
+    },
+    "proposers": {
+        "gryadka1": { 
+            "id": 0,
+            "port": 2379, 
+            "acceptors": ["a1", "a2", "a3"],
+            "quorum": { "read": 2, "write": 2 }
+        },
+        "gryadka2": { 
+            "id": 1,
+            "port": 2379, 
+            "acceptors": ["a1", "a2", "a3"],
+            "quorum": { "read": 2, "write": 2 }
+        },
+        "gryadka3": { 
+            "id": 2,
+            "port": 2379, 
+            "acceptors": ["a1", "a2", "a3"],
+            "quorum": { "read": 2, "write": 2 }
+        }
+    }
+}

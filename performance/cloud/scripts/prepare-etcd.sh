@@ -7,7 +7,8 @@ add-apt-repository -y ppa:gophers/archive
 apt-get update -y
 apt-get install -y golang-1.9-go
 
-mkdir /etcd
+mkdir /mnt/etcd
+ln -s /etcd /mnt/etcd
 
 pushd /etcd
 

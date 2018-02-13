@@ -27,3 +27,5 @@ npm install
 
 popd
 popd
+
+service redis stop

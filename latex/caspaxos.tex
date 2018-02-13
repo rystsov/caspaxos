@@ -44,7 +44,7 @@
 \maketitle
 
 \begin{abstract}
-CASPaxos is a replicated state machine (RSM) protocol, an extension of Single Decree Paxos (Synod) protocol. Unlike Raft and Multi-Paxos, it doesn't use leader election and log replication, so it avoids associated complexity such as log compaction and doesn't have latency issues when a leader crashes.
+CASPaxos is a replicated state machine (RSM) protocol, an extension of Single Decree Paxos (Synod) protocol. Unlike Raft and Multi-Paxos, it doesn't use leader election and log replication, so it avoids associated complexity such as log compaction. Its symmetric peer-to-peer approach achieves optimal commit latency in the wide-area and doesn't cause cluster unavailability when a leader crashes.
 
 The lightweight nature of CASPaxos creates new applications for RSM, e.g. instead of representing a key/value storage as a single RSM; it's possible to run an instance of CASPaxos per key to better fault tolerance and better performace on multi-core systems.
 
@@ -335,7 +335,7 @@ The protocol for changing the set of acceptors from $A_1 \cdots A_{2F+2}$ to $A_
 
 To reduce the size of the cluster, the same steps should be executed in the reverse order.
 
-TODO: But how many crashes can we tolerate if the crashes occur while the reconfiguration is in progress?
+{\it How many crashes can we tolerate if the crashes occur while the reconfiguration is in progress?} The reconfiguration procedure is a sequence of atomic changes, at each step a system is in correct state either from perspective of previous or next configuration. So it can tolerate the number of failures the configuration allows. For example, during $A_1 \cdots A_{2F+1}$ to $A_1 \cdots A_{2F+2}$ reconfiguration the system can tolerate $F$ failures. On the $A_1 \cdots A_{2F+2}$ to $A_1 \cdots A_{2F+3}$ path the fault tolerance increases from $F$ to $F+1$.
 
 \subsubsection{Low-latency and high-throughput consensus across WAN deployments}
 
@@ -380,34 +380,86 @@ An increasing of the "accept" quorum to $2F+1$ on writing an empty value before 
   \end{enumerate}
 \end{enumerate}
 
-\subsection{Performance}
+\subsection{Low latency}
 
-TODO:
+The folowing behaviour helps CASPaxos achieve low latency:
+\begin{itemize}
+  \item CASPaxos isn't leader based so a proposer should not forward all to a specific node to start executing.
+  \item Requests affecting different key/value pairs do not interfere.
+  \item It uses 1RTT in case most of the requests affecting the same key land on the same proposer.
+  \item No acceptor is special so a proposer ignores slow acceptors and proceeds as soon as quorum is reached.
+  \item Ability to use user defined functions as state transition functions reduces two steps transition process (read, modify, write) into one step process.
+\end{itemize}
 
-3 nodes deployment
-each node has a colocated client
-client in a loop reads, increments and writes back a value
-each client uses thier key to avoid collision
+Some of this behaviour matches Multi-Paxos and Raft but some doesn't. The EPaxos paper emphasizes the following latency issue of leader-based consensus protocols:
 
-EPaxos: when performing geo-replication, clients incur additional latency for communicating with a remote master
+\begin{quote}
+Multi-Paxos has high latency because the local replica must forward all commands to the stable leader \ldots when performing geo-replication, clients incur additional latency for communicating with a remote master
+\end{quote}
 
-EPaxos: Multi-Paxos has high latency because the local replica must forward all commands to the stable leader
+The Bizur paper focuses on another log related latency degradation:
 
-goal measure latency per region in a multi-region deployment
+\begin{quote}
+A single slow operation will increase the latency of all succeeding operations, until the slow operation is committed. For example, a network packet drop will affect multiple ongoing operations (instead of affecting just the operation within the dropped packet)
+\end{quote}
+
+Let's compare Gryadka, an experimental CASPaxos based key value storage, with the established storages Etcd and MongoDB to check how this a priori reasoning matches the real world.
+
+All storages were tested in the same environment. Gryadka, Etcd and MongoDB were using three nodes configuration deployed over wide area network in the Azure's\footnote{\href{https://azure.microsoft.com}{https://azure.microsoft.com}} datacenters in the "West US 2", "West Central US" and "Southeast Asia" regions running on DS4\_V2 machine with SSD drive.
+
+Each node has a colocated client which in one thread in a loop was reading, incrementing and writing back a value. All clients used thier keys to avoid collisions. During the experiment latency (average duration of read-modify-write operation) was measured per each client (region).
+
+\begin{figure}[!h]
+  \centering
+  \begin{tabular}{c|r|r|r|}
+  \cline{2-4}
+  & \multicolumn{3}{|c|}{Latency} \\
+  \cline{2-4}
+  & MongoDB & Etcd & Gryadka \\
+  \hline
+  \multicolumn{1}{|l|}{West US 2} & 530 ms & 680 ms & 46 ms \\
+  \hline
+  \multicolumn{1}{|l|}{West Central US} & 586 ms & 726 ms & 46 ms \\
+  \hline
+  \multicolumn{1}{|l|}{Southeast Asia} & 366 ms & 341 ms & 345 ms \\
+  \hline
+  \end{tabular}
+\end{figure}
+
+The result matches our expectation especially if we take into account delay between datacenters and the leader/leaderless nature of MongoDB, Etcd and Gryadka.
+
+\begin{figure}[!h]
+  \centering
+  \begin{tabular}{llr|}
+  \cline{3-3}
+  & & \multicolumn{1}{|l|}{RTT} \\
+  \hline
+  \multicolumn{1}{|l|}{West US 2} & \multicolumn{1}{|l|}{West Central US} & 23.7 ms\\
+  \hline
+  \multicolumn{1}{|l|}{West US 2} & \multicolumn{1}{|l|}{Southeast Asia} & 171.4 ms\\
+  \hline
+  \multicolumn{1}{|l|}{West Central US} & \multicolumn{1}{|l|}{Southeast Asia} & 191.5 ms\\
+  \hline
+  \end{tabular}
+\end{figure}
+
+It happened that leaders of MongoDB and Etcd were in the Southeast Asia region so to execute an operation the "West US 2" node needs one round trip to forward a request to the leader and to receive a responce (171.4 ms), the leader needs to write the change to the majority of nodes and get confirmations (at least 171.4 ms). Since the iteration consists of reading and writing in total "West US 2" node requires at least $685.6 \mbox{ms} = 2 \cdot (171.4 \mbox{ms} + 171.4 \mbox{ms})$. For the "West Central US" node the estimated latecy is $725.8 \mbox{ms} = 2 \cdot (191.5 \mbox{ms} + 171.4 \mbox{ms})$, for "Southeast Asia" it's $342.8 \mbox{ms} = 2 \cdot 171.4 \mbox{ms}$.
+
+Gryadka doesn't forward requests so the corresponding estimated latencies are $47.4 \mbox{ms} = 2 \cdot 23.7 \mbox{ms}$, $47.4 \mbox{ms} = 2 \cdot 23.7 \mbox{ms}$ and $342.8 \mbox{ms} = 2 \cdot 171.4 \mbox{ms}$.
+
+Network fluctuations may explain the minor difference between estimated and measured latencies.
+
+As you can see the difference in the underlying consensus protocol yields significant difference in the performace of the system.
 
 \subsection{Fault-tolerance}
 
 EPaxos: single-master optimization can harm availability: if the master fails, the system cannot service requests until a new master is elected
 
-TODO: same result as EPaxos \& Bizur.
-
 EPaxos: With Multi-Paxos, or any variant that relies on a stable leader, a leader failure prevents the system from processing client requests until a new leader is elected. Although clients could direct their requests to another replica (after they time out), a replica will usually not try to become the new leader immediately
-
-Bizur:  a single slow operation will increase the latency of all succeeding operations, until the slow operation is committed. For example, a network packet drop will affect multiple ongoing operations (instead of affecting just the operation within the dropped packet)
 
 Analys predicted issue.
 
-Experimental study\ref{\href{https://github.com/rystsov/perseus}{https://github.com/rystsov/perseus}} reveals complete downtime of cluster in every Raft based system including Etcd, CockroachDB, Consul, RethinkDB; in Raft inspired\ref{\href{https://www.mongodb.com/presentations/replication-election-and-consensus-algorithm-refinements-for-mongodb-3-2}{https://www.mongodb.com/presentations/replication-election-and-consensus-algorithm-refinements-for-mongodb-3-2}} MongoDB and in Paxos based Riak with consistent bucket.
+Experimental study\footnote{\href{https://github.com/rystsov/perseus}{https://github.com/rystsov/perseus}} reveals complete downtime of cluster in every Raft based system including Etcd, CockroachDB, Consul, RethinkDB; in Raft inspired\footnote{\href{https://www.mongodb.com/presentations/replication-election-and-consensus-algorithm-refinements-for-mongodb-3-2}{https://www.mongodb.com/presentations/replication-election-and-consensus-algorithm-refinements-for-mongodb-3-2}} MongoDB and in Paxos based Riak with consistent bucket.
 
 \section{Comparison with Related Work}
 

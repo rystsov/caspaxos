@@ -391,7 +391,7 @@ The following behaviour helps CASPaxos achieve low latency:
   \item Ability to use user-defined functions as state transition functions reduces two steps transition process (read, modify, write) into one step process.
 \end{itemize}
 
-Some of this behaviour matches Multi-Paxos and Raft, but some doesn't. The EPaxos paper emphasizes the following latency issue of leader-based consensus protocols:
+Some of it matches Multi-Paxos and Raft, but some doesn't. The EPaxos paper emphasizes the following latency issue of leader-based consensus protocols:
 
 \begin{quote}
 Multi-Paxos has high latency because the local replica must forward all commands to the stable leader \ldots when performing geo-replication, clients incur additional latency for communicating with a remote master

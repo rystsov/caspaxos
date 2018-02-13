@@ -335,6 +335,8 @@ The protocol for changing the set of acceptors from $A_1 \cdots A_{2F+2}$ to $A_
 
 To reduce the size of the cluster, the same steps should be executed in the reverse order.
 
+TODO: But how many crashes can we tolerate if the crashes occur while the reconfiguration is in progress?
+
 \subsubsection{Low-latency and high-throughput consensus across WAN deployments}
 
 WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across wide area network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos being an extension of Synod provides flexible quorums capabilities it can benefit from the same idea too.
@@ -380,13 +382,34 @@ An increasing of the "accept" quorum to $2F+1$ on writing an empty value before 
 
 \subsection{Performance}
 
-TODO
+TODO:
+
+3 nodes deployment
+each node has a colocated client
+client in a loop reads, increments and writes back a value
+each client uses thier key to avoid collision
+
+EPaxos: when performing geo-replication, clients incur additional latency for communicating with a remote master
+
+EPaxos: Multi-Paxos has high latency because the local replica must forward all commands to the stable leader
+
+goal measure latency per region in a multi-region deployment
 
 \subsection{Fault-tolerance}
 
+EPaxos: single-master optimization can harm availability: if the master fails, the system cannot service requests until a new master is elected
+
 TODO: same result as EPaxos \& Bizur.
 
-\section{Related Work}
+EPaxos: With Multi-Paxos, or any variant that relies on a stable leader, a leader failure prevents the system from processing client requests until a new leader is elected. Although clients could direct their requests to another replica (after they time out), a replica will usually not try to become the new leader immediately
+
+Bizur:  a single slow operation will increase the latency of all succeeding operations, until the slow operation is committed. For example, a network packet drop will affect multiple ongoing operations (instead of affecting just the operation within the dropped packet)
+
+Analys predicted issue.
+
+Experimental study\ref{\href{https://github.com/rystsov/perseus}{https://github.com/rystsov/perseus}} reveals complete downtime of cluster in every Raft based system including Etcd, CockroachDB, Consul, RethinkDB; in Raft inspired\ref{\href{https://www.mongodb.com/presentations/replication-election-and-consensus-algorithm-refinements-for-mongodb-3-2}{https://www.mongodb.com/presentations/replication-election-and-consensus-algorithm-refinements-for-mongodb-3-2}} MongoDB and in Paxos based Riak with consistent bucket.
+
+\section{Comparison with Related Work}
 
 Raft is similar to CASPaxos in its origin: both were created as an attempt to overcome the complexity of Multi-Paxos. Raft uses the same concepts as Multi-Paxos like leader election and log replication but rearranges them differently with focus on understandability. CASPaxos chooses different foundation and has less moving parts. As a result its implementation is $\frac{1}{4}$ of Raft's in terms of lines of code. Symmetric peer-to-peer approach of CASPaxos allows it to experience an isolation of a node without impacting clients, on contarary an isolation of a leader in Raft makes the whole cluster unavailable until new leader isn't elected.
 
@@ -403,6 +426,10 @@ CASPaxos is the consensus protocol which overcomes the complexity of log based s
 The comparative benchmarking with MongoDB and Etcd has shown that CASPaxos is comparable in stable environment and outperforms during the network incidents.
 
 The protocol has formal proof, was model checked with TLA+ and a implementation was tested using fault-injection methodology.
+
+\subsection{Further work}
+\subsubsection{Transactions}
+\subsubsection{Complex data structures}
 
 \begin{appendices}
 \section{Proof}

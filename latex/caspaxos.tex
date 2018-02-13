@@ -415,7 +415,7 @@ Each node has a colocated client which in one thread in a loop was reading, incr
   \cline{2-4}
   & \multicolumn{3}{|c|}{Latency} \\
   \cline{2-4}
-  & MongoDB & Etcd & Gryadka \\
+  & MongoDB (3.6.1) & Etcd (3.2.13) & Gryadka (1.61.8) \\
   \hline
   \multicolumn{1}{|l|}{West US 2} & 530 ms & 680 ms & 46 ms \\
   \hline
@@ -443,7 +443,7 @@ The result matches our expectation especially if we take into account delay betw
   \end{tabular}
 \end{figure}
 
-It happened that leaders of MongoDB and Etcd were in the Southeast Asia region so to execute an operation the "West US 2" node needs one round trip to forward a request to the leader and to receive a responce (171.4 ms), the leader needs to write the change to the majority of nodes and get confirmations (at least 171.4 ms). Since the iteration consists of reading and writing in total "West US 2" node requires at least $685.6 \mbox{ms} = 2 \cdot (171.4 \mbox{ms} + 171.4 \mbox{ms})$. For the "West Central US" node the estimated latecy is $725.8 \mbox{ms} = 2 \cdot (191.5 \mbox{ms} + 171.4 \mbox{ms})$, for "Southeast Asia" it's $342.8 \mbox{ms} = 2 \cdot 171.4 \mbox{ms}$.
+It happened that leaders of MongoDB and Etcd were in the "Southeast Asia" region so to execute an operation the "West US 2" node needs one round trip to forward a request to the leader and to receive a responce (171.4 ms), the leader needs to write the change to the majority of nodes and get confirmations (at least 171.4 ms). Since the iteration consists of reading and writing in total "West US 2" node requires at least $685.6 \mbox{ms} = 2 \cdot (171.4 \mbox{ms} + 171.4 \mbox{ms})$. For the "West Central US" node the estimated latecy is $725.8 \mbox{ms} = 2 \cdot (191.5 \mbox{ms} + 171.4 \mbox{ms})$, for "Southeast Asia" it's $342.8 \mbox{ms} = 2 \cdot 171.4 \mbox{ms}$.
 
 Gryadka doesn't forward requests so the corresponding estimated latencies are $47.4 \mbox{ms} = 2 \cdot 23.7 \mbox{ms}$, $47.4 \mbox{ms} = 2 \cdot 23.7 \mbox{ms}$ and $342.8 \mbox{ms} = 2 \cdot 171.4 \mbox{ms}$.
 
@@ -453,13 +453,31 @@ As you can see the difference in the underlying consensus protocol yields signif
 
 \subsection{Fault-tolerance}
 
-EPaxos: single-master optimization can harm availability: if the master fails, the system cannot service requests until a new master is elected
+The EPaxos paper explains how leader based consensus protocols lead to a cluster wide unavailability when a leader crashes or is isolated from the cluster:
 
-EPaxos: With Multi-Paxos, or any variant that relies on a stable leader, a leader failure prevents the system from processing client requests until a new leader is elected. Although clients could direct their requests to another replica (after they time out), a replica will usually not try to become the new leader immediately
+\begin{quote}
+  With Multi-Paxos, or any variant that relies on a stable leader, a leader failure prevents the system from processing client requests until a new leader is elected. Although clients could direct their requests to another replica (after they time out), a replica will usually not try to become the new leader immediately
+\end{quote}
 
-Analys predicted issue.
+CASPaxos doesn't suffer from this behaviour because all of its nodes are homogeneous and an isolation of one of them doesn't affect processes running against the others. An experimental study\footnote{\href{https://github.com/rystsov/perseus}{https://github.com/rystsov/perseus}} of distributed consistent databases with default settings during a leader isolation supports this a priori reasoning:
 
-Experimental study\footnote{\href{https://github.com/rystsov/perseus}{https://github.com/rystsov/perseus}} reveals complete downtime of cluster in every Raft based system including Etcd, CockroachDB, Consul, RethinkDB; in Raft inspired\footnote{\href{https://www.mongodb.com/presentations/replication-election-and-consensus-algorithm-refinements-for-mongodb-3-2}{https://www.mongodb.com/presentations/replication-election-and-consensus-algorithm-refinements-for-mongodb-3-2}} MongoDB and in Paxos based Riak with consistent bucket.
+\begin{figure}[!h]
+  \centering
+  \begin{tabular}{|l|l|l|r|}
+  \hline
+  Database & Version & Protocol & Unavailability\\
+  \hline
+  \hline
+  Gryadka & 1.61.8 & CASPaxos & 0s\\
+  Etcd & 3.2.13 & Raft & 1s\\
+  CockroachDB & 1.1.3 & MultiRaft & 7s\\
+  Riak & 2.2.3 & Vertical Paxos & 8s\\
+  Consul & 1.0.2 & Raft & 14s\\
+  TiDB & 1.1.0 & Raft & 15s\\
+  RethinkDB & 2.3.6 & Raft & 17s\\
+  \hline
+  \end{tabular}
+\end{figure}
 
 \section{Comparison with Related Work}
 
@@ -478,10 +496,6 @@ CASPaxos is the consensus protocol which overcomes the complexity of log based s
 The comparative benchmarking with MongoDB and Etcd has shown that CASPaxos is comparable in stable environment and outperforms during the network incidents.
 
 The protocol has formal proof, was model checked with TLA+ and a implementation was tested using fault-injection methodology.
-
-\subsection{Further work}
-\subsubsection{Transactions}
-\subsubsection{Complex data structures}
 
 \begin{appendices}
 \section{Proof}

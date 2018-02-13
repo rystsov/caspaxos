@@ -1,14 +1,12 @@
 Mon Feb 12 09:29:06 UTC 2018
 #etcd1 - West US 2 - DS4_V2
-#etcd2 - West Central Europe - DS4_V2
+#etcd2 - West Central US - DS4_V2
 #etcd3 - Southeast Asea - DS4_V2
 #PINGS:
 #  etcd1 <-> etcd2: 27.6 ms
 #  etcd1 <-> etcd3: 175.8 ms
 #  etcd2 <-> etcd3: 195.5 ms
 #legend: time|etcd1|etcd2|etcd3|etcd1:err|etcd2:err|etcd3:err
-1	0	0	0	0	0	0	2018/02/12 09:29:07
-2	2	2	2	0	0	0	2018/02/12 09:29:08
 3	2	1	3	0	0	0	2018/02/12 09:29:09
 4	1	1	5	0	0	0	2018/02/12 09:29:10
 5	1	2	2	0	0	0	2018/02/12 09:29:11

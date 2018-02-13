@@ -18,7 +18,7 @@ rm mongodb-linux-x86_64-3.6.1.tgz
 
 cp -r /scripts/caspaxos/performance/mongodb/db/remote-tester /mongo/remote-tester
 
-cp /scripts/caspaxos/performance/mongodb/db/run-mongo.sh /mongo/run-etcd.sh
+cp /scripts/caspaxos/performance/mongodb/db/run-mongo.sh /mongo/run-mongo.sh
 cp /scripts/caspaxos/performance/mongodb/db/run-tester.sh /mongo/run-tester.sh
 cp /scripts/caspaxos/performance/mongodb/db/topology /mongo/topology
 cp /scripts/caspaxos/performance/mongodb/db/isolate.sh /mongo/isolate.sh

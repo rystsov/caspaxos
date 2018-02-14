@@ -91,9 +91,9 @@ We begin by briefly describing the Synod protocol from the perspective of master
 
 \subsection{Synod}
 
-An implementation of the Synod protocol is an initializable only once distributed register. If several clients try to initialize a it concurrently, the requests either prevent each other from continuing, or a single initialization succeeds. Once a client receives a confirmation, all the follow-up initializations must return an already accepted value.
+An implementation of the Synod protocol is an initializable only once distributed register. If several clients try to initialize it concurrently, the requests either prevent each other from continuing, or a single initialization succeeds. Once a client receives a confirmation, all the follow-up initializations must return an already accepted value.
 
-The register belongs to the CP category of the CAP theorem so it gives up availability when more than $\floor{N/2}$ are down but preserves consistency (safety, linearizability).
+The register belongs to the CP category of the CAP theorem, so it gives up availability when more than $\floor{N/2}$ are down but preserves consistency (safety, linearizability).
 
 The roles of nodes in the system are:
 \begin{enumerate}
@@ -210,9 +210,9 @@ Let's review the Synod and CASPaxos protocols step-by-step.
   
   %\hline
   
-  If they all contain empty value then the proposer defines current state as $\emptyset$ otherwise it picks the value of the tuple with the highest ballot number as the current state.
+  If they all contain the empty value, then the proposer defines the current state as $\emptyset$ otherwise it picks the value of the tuple with the highest ballot number.
   &
-  If they all contain empty value then the proposer defines current state as $\emptyset$ otherwise it picks the value of the tuple with the highest ballot number as the current state.
+  If they all contain the empty value, then the proposer defines the current state as $\emptyset$ otherwise it picks the value of the tuple with the highest ballot number.
   \\[6pt]
   
   %\hline
@@ -264,7 +264,7 @@ Let's review the Synod and CASPaxos protocols step-by-step.
 \end{longtable}
 \end{center}
 
-As you could noticed, the CASPaxos's state transition is almost identical to the Synod's initialization. 
+As you could notice, the CASPaxos's state transition is almost identical to the Synod's initialization. 
 
 If we use
 $$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val\; \mbox{else}\; x$$
@@ -300,7 +300,7 @@ Cluster membership change is a process of changing the set of nodes executing a 
   \item {\it How to replace permanently failed nodes.} CASPaxos tolerates transient failures but when the failures are permanent eventually more than $\floor{N/2}$ nodes crash, and the system becomes unavailable. A replacement of a failed node in the $N$ nodes cluster can be modelled as a shrinkage to $N-1$ followed by expansion to $N$.
 \end{enumerate}
 
-The process of memberschange is based on Raft's idea of joint consensus\cite{raft} where the majorities of two different configurations overlap during transitions. This allows the cluster to continue operating normally during configuration changes.
+The process of membership change is based on Raft's idea of joint consensus\cite{raft} where the majorities of two different configurations overlap during transitions. It allows the cluster to continue operating normally during configuration changes.
 
 The proof of this idea with application to CASPaxos is based on two observations:
 
@@ -330,13 +330,13 @@ $A_1 \cdots A_{2F+3}$ is simpler because we can treat a $2F+2$ nodes cluster as 
   \item Turn on the $A_{2f+3}$ acceptor.
 \end{enumerate}
 
-To reduce the size of the cluster, the same steps should be executed in the reverse order.
+The same steps should be executed in the reverse order to reduce the size of the cluster
 
 {\it How many crashes can we tolerate if the crashes occur while the reconfiguration is in progress?} During and after each step the system is correct either from the perspective of previous or next configuration and can tolerate the number of failures the configuration allows.
 
 \subsubsection{Low-latency and high-throughput consensus across WAN deployments}
 
-WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across wide area network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos is an extension of Synod it provides the same capabilities and can benefit the idea too.
+WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across wide area network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos is an extension of Synod, it provides the same capabilities and can benefit the idea too.
 
 \section{A CASPaxos-based key/value storage}
 
@@ -372,7 +372,7 @@ A multi-step removal process fixes this problem.
 
 \begin{enumerate}
   \item On a delete request a system writes an empty value with regular $F+1$ "accept" quorum, schedules a garbage collection operation and confirms the request to a client.
-  \item The garbage collection operation in background:
+  \item The garbage collection operation in the background:
   \begin{enumerate}
     \item Replicates an empty value to all nodes by reading it with $2F+1$ quorum size.
     \item If at least one node is down the operation reschedules itself.
@@ -393,7 +393,7 @@ The following behaviour helps CASPaxos achieve low latency:
   \item An ability to use user-defined functions as state transition functions reduces two steps transition process (read, modify, write) into one step process.
 \end{itemize}
 
-Some of it is possible with Multi-Paxos or Raft and some isn't. The EPaxos paper emphasizes the following latency issue of leader-based consensus protocols:
+Something is possible with Multi-Paxos or Raft but something isn't. The EPaxos paper emphasizes the following latency issue of leader-based consensus protocols:
 
 \begin{quote}
 Multi-Paxos has high latency because the local replica must forward all commands to the stable leader \ldots when performing geo-replication, clients incur additional latency for communicating with a remote master
@@ -598,7 +598,7 @@ Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised 
 
   Let "promise" events $P$ have the following structure $\{ \mbox{ts}, \mbox{b}, \mbox{ret} : \{ \mbox{b}, \mbox{s} \} \}$ where ts - local time, b - promised ballot number, ret.b - a ballot number of the accepted state and ret.s is the state itself. "accept" events $A$'s structure is  $\{ \mbox{ts}, \mbox{b}, \mbox{s} \}$.
 
-  By definition "promise" confirmation returns the latest state, let's write it formally
+  By definition "promise" confirmation returns the latest state, let's write it formally.
 
   \begin{equation} \label{eq:last}
     \forall k \in P \; k.ret.b = \max \{ l.b \;|\;l \in A \land l.ts < k.ts \} \\
@@ -635,7 +635,7 @@ Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised 
 
 \section{FPaxos}
 \label{appendix:fpaxos}
-In the proof of CASPaxos \ref{appendix:proof} we didn't use the size of the promise/accept quorums and only used their intersection, so the same proof proves FPaxos observation too.
+The proof of CASPaxos \ref{appendix:proof} doesn't use the size of the promise/accept quorums, it depends only on their intersection, so the same proof proves FPaxos observation too.
 
 \end{appendices}
 
@@ -649,47 +649,47 @@ In the proof of CASPaxos \ref{appendix:proof} we didn't use the size of the prom
   2001.
 
 \bibitem{abcds}
-  Butler W. Lampson
+  Butler W. Lampson,
   \emph{"The ABCDs of Paxos"}.
   2001.
 
 \bibitem{chubby}
-  Tushar Chandra, Robert Griesemer, Joshua Redstone
+  Tushar Chandra, Robert Griesemer, Joshua Redstone,
   \emph{"Paxos Made Live - An Engineering Perspective"}.
   2007.
 
 \bibitem{vertical}
-  Leslie Lamport, Dahlia Malkhi, Lidong Zhou
+  Leslie Lamport, Dahlia Malkhi, Lidong Zhou,
   \emph{"Vertical Paxos and Primary-Backup Replication"}
   2009.
 
 \bibitem{spanner}
-  Corbett, J. C., Dean, J., Epstein, M., Fikes, A., Frost C., Furman, J.J., Ghemawat, S., Gubarev, A., Heiser, C., Hochschild, P., at al.
+  Corbett, J. C., Dean, J., Epstein, M., Fikes, A., Frost C., Furman, J.J., Ghemawat, S., Gubarev, A., Heiser, C., Hochschild, P., at al.,
   \emph{"Spanner: Googles globally distributed database"}.
   2012.
 
 \bibitem{raft}
-  Diego Ongaro, John Ousterhout
+  Diego Ongaro, John Ousterhout,
   \emph{"In Search of an Understandable Consensus Algorithm"}.
   2013.
 
 \bibitem{epaxos}
-  Iulian Moraru, David G. Andersen, Michael Kaminsky
+  Iulian Moraru, David G. Andersen, Michael Kaminsky,
   \emph{"There Is More Consensus in Egalitarian Parliaments"}.
   2013.
 
 \bibitem{fpaxos}
-  Heidi Howard, Dahlia Malkhi, Alexander Spiegelman
+  Heidi Howard, Dahlia Malkhi, Alexander Spiegelman,
   \emph{"Flexible Paxos: Quorum intersection revisited"}.
   2016.
 
 \bibitem{wpaxos}
-  Ailidani Ailijiang, Aleksey Charapko, Murat Demirbas, Tevfik Kosar
+  Ailidani Ailijiang, Aleksey Charapko, Murat Demirbas, Tevfik Kosar,
   \emph{"WPaxos: Ruling the Archipelago with Fast Consensus"}.
   2017.
 
 \bibitem{bizur}
-  Ezra N. Hoch, Yaniv Ben-Yehuda, Noam Lewis, Avi Vigder
+  Ezra N. Hoch, Yaniv Ben-Yehuda, Noam Lewis, Avi Vigder,
   \emph{"Bizur: A Key-value Consensus Algorithm for Scalable File-systems"}.
   2017.
 

@@ -515,9 +515,9 @@ The protocol has the formal proof, was model checked with TLA+ and the implement
 
 \theoremstyle{definition}
 \begin{definition}{\bf("is a descendant" relation)}
-  What does it mean that one event is a descendant of another? Informally it means that there is a chain of changes changing one state into another. Let's formalize it. We start by defining this relation between the successfully accepted messages (denoted as $\ddot{E}^2$) and then expend it to $\bar{E}^2$.
+  What does it mean that one event is a descendant of another? Informally it means that there is a chain of changes changing one state into another. Let's formalize it. We start by defining this relation between the successfully accepted message events and then expend it to $\bar{E}^2$. Accepted message events happen on acceptors, for each acknowledged message event there are at least $F+1$ accepted message events, a set of such events is denoted as $\ddot{E}^2$.
 
-  By definition of a proposer any accepted state is a function of previously accepted state, so
+  By definition of CASPaxos any accepted state is a function of previously accepted state, so
   
   \begin{equation} \label{eq:chain}
     \forall x \in \ddot{E}^2 \quad \exists ! f \quad \exists ! y \in \ddot{E}^2 : s(x) = f(s(y))
@@ -529,17 +529,17 @@ The protocol has the formal proof, was model checked with TLA+ and the implement
     \forall x \in \ddot{E}^2 \; \forall x \in \ddot{E}^2 \;:\; x \to y \equiv x \sim y \lor (\exists z \in \ddot{E}^2 \;:\; x \to z \land z \to y)
   \end{equation}
   
-  Let's define $x.w$ for $x \in \bar{E}^2$ as events which correspond to the confirmations of an accept message. By definition the following properties are true:
+  Let's define $x.w$ for $x \in \bar{E}^2$ as accept message events which correspond to the acknowledged change $x$. By definition the following properties hold:
   \begin{enumerate}
     \item $\forall x \in \bar{E}^2 \; x.w \subset \ddot{E}^2$
-    \item $\forall x \in \bar{E}^2 \; |x.w| >= F+1$ (we require a quorum of confirmations before acknoledging a change)
-    \item $\forall x \in \bar{E}^2 \; \forall y \in x.w \;:\; s(x) = s(y)$ (accepted state and acknoledged state is the same)
+    \item $\forall x \in \bar{E}^2 \; |x.w| >= F+1$ (we require a quorum of confirmations before acknowledging a change)
+    \item $\forall x \in \bar{E}^2 \; \forall y \in x.w \;:\; s(x) = s(y)$ (accepted state and acknowledged state is the same)
   \end{enumerate}
   
   The third property allows to continue "is a descendant" relation on $\bar{E}^2$:
   
   \begin{equation}
-    \forall x \in \bar{E}^2 \; \forall x \in \bar{E}^2 \;:\; x \to y \equiv (\forall a \in x.w \; \forall b \in y.w \; a \to b)
+    \forall x \in \bar{E}^2 \; \forall y \in \bar{E}^2 \;:\; x \to y \equiv (\forall a \in x.w \; \forall b \in y.w \; a \to b)
   \end{equation}
 \end{definition}
 
@@ -554,7 +554,7 @@ The protocol has the formal proof, was model checked with TLA+ and the implement
 \end{lemma}
 
 \begin{proof}
-  Let $z_0 = y$ and $z_{n+1} = I^{-1}(z_{n})$. By definition ballot numbers only increase: $z_{n+1}.b < z_{n}.b$, so we can use mathematical induction and \ref{eq:step} guarantees that $\exists k \;:\; z_k.b = x.b$ meaning $s(z_k) = s(x)$. Since $z_{k+1} \sim z_k$ we proved the following statement:
+  Let $z_0 := y$ and $z_{n+1} := I^{-1}(z_{n})$. By definition ballot numbers only increase: $z_{n+1}.b < z_{n}.b$, so we can use mathematical induction and \ref{eq:step} guarantees that $\exists k \;:\; z_k.b = x.b$ meaning $s(z_k) = s(x)$. Since $z_{k+1} \sim z_k$ we proved the following statement:
 
   \begin{equation} \label{eq:bd}
     \forall x \in \bar{E}^2 \; \forall y \in \ddot{E}^2 \;:\; x.b < y.b \implies x \to y
@@ -575,7 +575,7 @@ The protocol has the formal proof, was model checked with TLA+ and the implement
   Which proofs the theorem \ref{th:proof}.
 \end{proof}
 
-Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised events (prepare phase) and $x.r$ as for $x \in \ddot{E}^2$ as events which correspond to the confirmations of an prepare message. By definition the following properties hold:
+Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised events (happen on acceptors during the prepare phase) and $x.r$ for $x \in \ddot{E}^2$ as promised events corresponding to the acknowledged change $x$. By definition the following properties hold:
 \begin{enumerate}
   \item $\forall x \in \ddot{E}^2 \; x.r \subset \ddot{E}^1$
   \item $\forall x \in \ddot{E}^2 \; |x.r| >= F+1$ (we require a quorum of confirmations before staring the accept phase)
@@ -590,15 +590,61 @@ Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised 
   
   $$N = \{z.node \;|\; z \in x.w\} \cap \{z.node \;|\; z \in y.r\}$$
 
-  $N$ isn't empty because $x.w$ intersects with $y.r$. Let $n \in N$, and $w \equiv x.w |_n$ and $u \equiv y.r |_n$ are accepted and promised events on node $n$. We know that event $w$ happened before $u$ in $n$'s timeframe because an acceptor doesn't accept messages with lesser ballot numbers than they already saw and $w.b = x.b < y.b = u.b$ implies
+  $N$ isn't empty because $x.w$ intersects with $y.r$. Let $n \in N$, and $w \equiv x.w |_n$ and $u \equiv y.r |_n$ are accepted and promised events on node $n$. By definition,
 
   \begin{equation}
     w.b < u.b
   \end{equation}
+  
+  It's true because event $w$ happened before $u$ in $n$'s timeframe since an acceptor doesn't accept messages with lesser ballot numbers than they already saw and $w.b = x.b < y.b = u.b$.
 
-  Let "promise" events $P$ have the following structure $\{ \mbox{ts}, \mbox{b}, \mbox{ret} : \{ \mbox{b}, \mbox{s} \} \}$ where ts - local time, b - promised ballot number, ret.b - a ballot number of the accepted state and ret.s is the state itself. "accept" events $A$'s structure is  $\{ \mbox{ts}, \mbox{b}, \mbox{s} \}$.
+  Let $P \equiv \{ x \;|\; x \in \ddot{E}^1 \land x.node = n\}$ and each event in $P$ have the following structure:
 
-  By definition "promise" confirmation returns the latest state, let's write it formally.
+  \begin{figure}[!h]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \multicolumn{2}{|c|}{$x \in P$}\\
+    \hline
+    $x.ts$ & local time on node $x.node$\\
+    \hline
+    $x.b$ & promise, a ballot number of last prepare message\\
+    \hline
+    $x.ret.b$ & a ballot number of the last accepted state\\
+    \hline
+    $x.ret.s$ & the last accepted state\\
+    \hline
+    $x.node$ & a node where $x$ was emitted\\
+    \hline
+    \hline
+    $s(x)$ & is equal to $x.ret.s$\\
+    \hline
+    \end{tabular}
+  \end{figure}
+  
+  Let $A \equiv \{ x \;|\; x \in \ddot{E}^2 \land x.node = n \}$ and each event's structure is:
+
+  \begin{figure}[!h]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \multicolumn{2}{|c|}{$x \in A$}\\
+    \hline
+    $x.ts$ & local time on node $x.node$\\
+    \hline
+    $x.b$ & a ballot number of the last accepted state\\
+    \hline
+    $x.s$ & the last accepted state\\
+    \hline
+    $x.node$ & a node where $x$ was emitted\\
+    \hline
+    \hline
+    $s(x)$ & is equal to $x.s$\\
+    \hline
+    \end{tabular}
+  \end{figure}
+
+  For $x$ in $P$, $x.ret$ is the latest accepted state, let's write it formally.
 
   \begin{equation} \label{eq:last}
     \forall k \in P \; k.ret.b = \max \{ l.b \;|\;l \in A \land l.ts < k.ts \} \\
@@ -616,7 +662,7 @@ Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised 
     x.b = w.b \leq \max \{ z \in A, z.ts < u.ts \} = u.ret.b
   \end{equation}
 
-  By definition we pick a state with max ballot number out of quorum of promise confirmations as the current state so:
+  By definition a proposer picks value with max ballot number out of quorum of promise confirmations as the current state, so:
 
   \begin{equation}
     I^{-1}(y).b = \max \{ z.ret.b | z \in y.r \}
@@ -635,7 +681,7 @@ Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised 
 
 \section{FPaxos}
 \label{appendix:fpaxos}
-The proof of CASPaxos \ref{appendix:proof} doesn't use the size of the promise/accept quorums, it depends only on their intersection, so the same proof proves FPaxos observation too.
+The proof of CASPaxos \ref{appendix:proof} doesn't use the size of the promise/accept quorums, it depends only on their intersection, so the same proof proves FPaxos too.
 
 \end{appendices}
 

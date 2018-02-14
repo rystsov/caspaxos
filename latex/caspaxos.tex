@@ -471,12 +471,12 @@ CASPaxos doesn't suffer from this behaviour because all of its nodes are homogen
   \hline
   \hline
   Gryadka & 1.61.8 & CASPaxos & 0s\\
-  Etcd & 3.2.13 & Raft & 1s\\
   CockroachDB & 1.1.3 & MultiRaft & 7s\\
-  Riak & 2.2.3 & Vertical Paxos & 8s\\
   Consul & 1.0.2 & Raft & 14s\\
-  TiDB & 1.1.0 & MultiRaft & 15s\\
+  Etcd & 3.2.13 & Raft & 1s\\
   RethinkDB & 2.3.6 & Raft & 17s\\
+  Riak & 2.2.3 & Vertical Paxos & 8s\\
+  TiDB & 1.1.0 & MultiRaft & 15s\\
   \hline
   \end{tabular}
 \end{figure}
@@ -506,7 +506,7 @@ The protocol has the formal proof, was model checked with TLA+ and the implement
 \begin{theorem} \label{th:proof}
   We want to prove that for any two acknowledged changes one is always a descendant of another.
   
-  Let $\bar{E}^2$ represent a set of acknowledged events (a proposer received at least $F+1$ confirmations of an "accept" message) and $\to$ represent the "is a descendant" relation; then we want to demonstrate that.
+  Let $\bar{E}^2$ represent a set of acknowledged events (a proposer received at least $F+1$ confirmations of an "accept" message), and $\to$ represent the "is a descendant" relation; then we want to demonstrate that.
 
   \begin{equation}
     \forall x,y \in \bar{E}^2 \;:\; x \to y \lor y \to x
@@ -536,7 +536,7 @@ The protocol has the formal proof, was model checked with TLA+ and the implement
     \item $\forall x \in \bar{E}^2 \; \forall y \in x.w \;:\; s(x) = s(y)$ (accepted state and acknowledged state is the same)
   \end{enumerate}
   
-  The third property allows to continue "is a descendant" relation on $\bar{E}^2$:
+  The third property allows continuing "is a descendant" relation on $\bar{E}^2$:
   
   \begin{equation}
     \forall x \in \bar{E}^2 \; \forall y \in \bar{E}^2 \;:\; x \to y \equiv (\forall a \in x.w \; \forall b \in y.w \; a \to b)
@@ -550,7 +550,7 @@ The protocol has the formal proof, was model checked with TLA+ and the implement
     \forall x \in \bar{E}^2 \; \forall y \in \ddot{E}^2 \;:\; x.b < y.b \implies x.b \leq I^{-1}(y).b
   \end{equation}
 
-  Where $x.b$ means a ballot number of an acknowledgement or confirmation depending on type $x$.
+  Where $x.b$ depending on the type of $x$ means a ballot number of an acknowledgement or confirmation.
 \end{lemma}
 
 \begin{proof}

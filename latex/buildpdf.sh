@@ -1,5 +1,5 @@
 #!/bin/bash
 
 cd /latex
-xelatex caspaxos.tex
-xelatex caspaxos.tex
+pdflatex caspaxos.tex
+pdflatex caspaxos.tex

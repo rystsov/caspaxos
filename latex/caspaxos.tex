@@ -20,16 +20,8 @@
 \usepackage{etoolbox}
 \AtBeginEnvironment{quote}{\small}
 
-\usepackage{fontspec}
-\setmainfont[Ligatures=TeX]{Liberation Serif}
-\setsansfont{Liberation Sans}
-\setmonofont{Liberation Mono}
-
 \usepackage{mathtools}
 \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
-
-\usepackage{polyglossia}
-\setdefaultlanguage{english}
 
 \usepackage[colorlinks=true,urlcolor=blue,linkcolor=blue]{hyperref}
 
@@ -166,111 +158,104 @@ Just like Synod, it's a CP-system, and it requires $2F+1$ nodes to tolerate $F$ 
 Let's review the Synod and CASPaxos protocols step-by-step.
 
 \begin{center}
-\begin{longtable}{p{2em}p{13em}|p{2em}p{13em}} 
+\begin{longtable}{p{15em}|p{15em}} 
   \hline
-  \multicolumn{2}{p{15em}|}{{\bf Synod}}
+  {\bf Synod}
   &
-  \multicolumn{2}{p{15em}}{{\bf CASPaxos}} \\ 
+  {\bf CASPaxos} \\ 
   \hline
   \endfirsthead
+
   \hline
-  \multicolumn{2}{p{15em}|}{{\bf Synod}}
+  {\bf Synod}
   &
-  \multicolumn{2}{p{15em}}{{\bf CASPaxos}} \\ 
+  {\bf CASPaxos} \\ 
   \hline
   \endhead
   \endfoot
   \endlastfoot
   
-  \multicolumn{2}{p{15em}|}{A client proposes a value to a proposer.}
+  A client proposes a value to a proposer.
   &
-  \multicolumn{2}{p{15em}}{A client submits a change function to a proposer.} \\
+  A client submits a change function to a proposer. \\
   
   \hline
   
-  \multicolumn{2}{p{15em}|}{The proposer generates a ballot number, $B$, and send a prepare message containing that number to the acceptors.}
+  The proposer generates a ballot number, $B$, and send a prepare message containing that number to the acceptors.
   &
-  \multicolumn{2}{p{15em}}{The proposer generates a ballot number, $B$, and send a prepare message containing that number to the acceptors.} \\
+  The proposer generates a ballot number, $B$, and send a prepare message containing that number to the acceptors. \\
   
   \hline
   
-  \multicolumn{2}{p{15em}|}{An acceptor:}
+  An acceptor:
   &
-  \multicolumn{2}{p{15em}}{An acceptor:} \\[6pt]
+  An acceptor: \\[6pt]
   
   %\hline
   
-  &
   Returns a conflict if it already saw a greater ballot number.
-  &
   &
   Returns a conflict if it already saw a greater ballot number.
   \\[6pt]
   
   %\hline
   
-  &
   Persists the ballot number as a promise and returns a confirmation either with an empty value (if it hasn't accepted any value yet) or with a tuple of an accepted value and its ballot number.
-  &
   &
   Persists the ballot number as a promise and returns a confirmation either with an empty value (if it hasn't accepted any value yet) or with a tuple of the latest value and its ballot number.
   \\[6pt]
   
   \hline
   
-  \multicolumn{2}{p{15em}|}{The proposer waits for the $F+1$ confirmations}
+  The proposer waits for the $F+1$ confirmations
   &
-  \multicolumn{2}{p{15em}}{The proposer waits for the $F+1$ confirmations} \\
+  The proposer waits for the $F+1$ confirmations \\
   
   \hline
   
-  \multicolumn{2}{p{15em}|}{If they all contain an empty value then the proposer writes "ok" to the result variable and sends an accept message containing the ballot number $B$ and the proposing value to the acceptors.}
+  If they all contain an empty value then the proposer writes "ok" to the result variable and sends an accept message containing the ballot number $B$ and the proposing value to the acceptors.
   &
-  \multicolumn{2}{p{15em}}{The proposer defines the current state as $\emptyset$ if each confirmation contains an empty value; if at least one confirmation contains a tuple, then the proposer picks the value of the tuple with the highest ballot number as the current state.}
+  The proposer defines the current state as $\emptyset$ if each confirmation contains an empty value; if at least one confirmation contains a tuple, then the proposer picks the value of the tuple with the highest ballot number as the current state.
   \\
   
   \hline
   
-  \multicolumn{2}{p{15em}|}{If at least one message contains a tuple then the proposer picks the tuple with the highest ballot number, writes ("conflict", the tuple's value) to the result variable and sends an accept message with the generated ballot number $B$ and the tuple's value to the acceptors.}
+  If at least one message contains a tuple then the proposer picks the tuple with the highest ballot number, writes ("conflict", the tuple's value) to the result variable and sends an accept message with the generated ballot number $B$ and the tuple's value to the acceptors.
   &
-  \multicolumn{2}{p{15em}}{Then it invokes the change function passing the current state as an argument to calculate the new state and sends it with the generated ballot number $B$ as an accept message to the acceptors.}
+  Then it invokes the change function passing the current state as an argument to calculate the new state and sends it with the generated ballot number $B$ as an accept message to the acceptors.
   \\
   
   \hline
   
-  \multicolumn{2}{p{15em}|}{An acceptor:}
+  An acceptor:
   &
-  \multicolumn{2}{p{15em}}{An acceptor:} \\[6pt]
+  An acceptor: \\[6pt]
   
   %\hline
   
-  &
   Returns a conflict if it already saw a greater ballot number.
-  &
   &
   Returns a conflict if it already saw a greater ballot number.
   \\[6pt]
   
   %\hline
   
-  &
   Erases the promise, marks the received tuple (ballot number, value) as the accepted value and returns a confirmation
-  &
   &
   Erases the promise, marks the received tuple (ballot number, value) as the accepted value and returns a confirmation
   \\[6pt]
   
   \hline
   
-  \multicolumn{2}{p{15em}|}{The proposer waits for the $F+1$ confirmations}
+  The proposer waits for the $F+1$ confirmations
   &
-  \multicolumn{2}{p{15em}}{The proposer waits for the $F+1$ confirmations.} \\[6pt]
+  The proposer waits for the $F+1$ confirmations. \\[6pt]
   
   \hline
   
-  \multicolumn{2}{p{15em}|}{The proposer returns the result variable to the client}
+  The proposer returns the result variable to the client
   &
-  \multicolumn{2}{p{15em}}{The proposer returns the new state to the client.} \\[6pt]
+  The proposer returns the new state to the client. \\[6pt]
   
   \hline
 \end{longtable}
@@ -380,6 +365,8 @@ An increasing of the "accept" quorum to $2F+1$ on writing an empty value before 
   \end{enumerate}
 \end{enumerate}
 
+\newpage
+
 \subsection{Low latency}
 
 The following behaviour helps CASPaxos achieve low latency:
@@ -409,7 +396,7 @@ All storages were tested in the same environment. Gryadka, Etcd and MongoDB were
 
 Each node has a colocated client which in one thread in a loop was reading, incrementing and writing back a value. All clients used their keys to avoid collisions. During the experiment latency (average duration of read-modify-write operation) was measured per each client (region).
 
-\begin{figure}[!h]
+\begin{figure}[!htb]
   \centering
   \begin{tabular}{c|r|r|r|}
   \cline{2-4}

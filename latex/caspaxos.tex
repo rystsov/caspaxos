@@ -382,7 +382,7 @@ A multi-step removal process fixes this problem.
   \begin{enumerate}
     \item Replicates an empty value to all nodes by reading it with $2F+1$ quorum size.
     \item Reschedules itself if at least one node is down.
-    \item Removes the empty register from every acceptor.
+    \item Removes the empty register from every acceptor if ballot number is intact, do nothing otherwise
   \end{enumerate}
 \end{enumerate}
 

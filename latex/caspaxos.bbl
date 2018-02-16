@@ -1,0 +1,58 @@
+\begin{thebibliography}{10}
+
+\bibitem{lamport01}
+Leslie Lamport et~al.
+\newblock Paxos made simple.
+\newblock {\em ACM Sigact News}, 32(4):18--25, 2001.
+
+\bibitem{raft}
+Diego Ongaro and John~K Ousterhout.
+\newblock In search of an understandable consensus algorithm.
+\newblock In {\em USENIX Annual Technical Conference}, pages 305--319, 2014.
+
+\bibitem{chubby}
+Tushar~D Chandra, Robert Griesemer, and Joshua Redstone.
+\newblock Paxos made live: an engineering perspective.
+\newblock In {\em Proceedings of the twenty-sixth annual ACM symposium on
+  Principles of distributed computing}, pages 398--407. ACM, 2007.
+
+\bibitem{spanner}
+James~C Corbett, Jeffrey Dean, Michael Epstein, Andrew Fikes, Christopher
+  Frost, Jeffrey~John Furman, Sanjay Ghemawat, Andrey Gubarev, Christopher
+  Heiser, Peter Hochschild, et~al.
+\newblock Spanner: Google’s globally distributed database.
+\newblock {\em ACM Transactions on Computer Systems (TOCS)}, 31(3):8, 2013.
+
+\bibitem{epaxos}
+Iulian Moraru, David~G Andersen, and Michael Kaminsky.
+\newblock There is more consensus in egalitarian parliaments.
+\newblock In {\em Proceedings of the Twenty-Fourth ACM Symposium on Operating
+  Systems Principles}, pages 358--372. ACM, 2013.
+
+\bibitem{bizur}
+Ezra~N Hoch, Yaniv Ben-Yehuda, Noam Lewis, and Avi Vigder.
+\newblock Bizur: A key-value consensus algorithm for scalable file-systems.
+\newblock 2017, 1702.04242.
+
+\bibitem{abcds}
+Butler Lampson.
+\newblock The abcd's of paxos.
+\newblock In {\em PODC}, volume~1, page~13, 2001.
+
+\bibitem{vertical}
+Leslie Lamport, Dahlia Malkhi, and Lidong Zhou.
+\newblock Vertical paxos and primary-backup replication.
+\newblock In {\em Proceedings of the 28th ACM symposium on Principles of
+  distributed computing}, pages 312--313. ACM, 2009.
+
+\bibitem{fpaxos}
+Heidi Howard, Dahlia Malkhi, and Alexander Spiegelman.
+\newblock Flexible paxos: Quorum intersection revisited.
+\newblock 2016, 1608.06696.
+
+\bibitem{wpaxos}
+Ailidani Ailijiang, Aleksey Charapko, Murat Demirbas, and Tevfik Kosar.
+\newblock Wpaxos: Ruling the archipelago with fast consensus.
+\newblock 2017, 1703.08905.
+
+\end{thebibliography}

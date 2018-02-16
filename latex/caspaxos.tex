@@ -25,7 +25,8 @@
 \usepackage{mathtools}
 \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
 
-\usepackage[colorlinks=true,urlcolor=blue,linkcolor=blue]{hyperref}
+%\usepackage[colorlinks=true,urlcolor=blue,linkcolor=blue]{hyperref}
+\usepackage{hyperref}
 
 \begin{document}
 
@@ -505,6 +506,9 @@ CASPaxos is the consensus protocol which overcomes the complexity of log-based s
 
 The protocol has the formal proof, was model checked with TLA+ and the implementation was tested using fault-injection methodology.
 
+\bibliographystyle{hunsrt}
+\bibliography{bib}
+
 \begin{appendices}
 \section{Proof}
 \label{appendix:proof}
@@ -690,10 +694,5 @@ Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised 
 The proof of CASPaxos \ref{appendix:proof} doesn't use the size of the promise/accept quorums, it depends only on their intersection, so the same proof proves FPaxos too.
 
 \end{appendices}
-
-\newpage
-
-\bibliographystyle{hunsrt}
-\bibliography{bib}
 
 \end{document}

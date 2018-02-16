@@ -16,6 +16,7 @@
 \usetikzlibrary{calc}
 
 \usepackage{enumerate}
+\usepackage{enumitem}
 
 \usepackage{etoolbox}
 \AtBeginEnvironment{quote}{\small}
@@ -96,11 +97,12 @@ An implementation of the Synod protocol is an initializable only once distribute
 The register belongs to the CP category of the CAP theorem, so it gives up availability when more than $\floor{N/2}$ nodes are down but always preserves consistency (safety, linearizability).
 
 The roles of the nodes in the system are:
-\begin{enumerate}
-  \item {\bf Clients} initiate a request by communicating with a proposer; clients may be stateless, the system may have arbitrary numbers of clients.
-  \item {\bf Proposers} perform the initialization by communicating with acceptors. Proposers keep minimal state needed to generate unique increasing update IDs (ballot numbers), the system may have arbitrary numbers of proposers.
-  \item {\bf Acceptors} store the accepted value, the system should have $2F+1$ acceptors to tolerate $F$ failures.
-\end{enumerate}
+
+\begin{description}[align=left]
+  \item [Clients] initiate a request by communicating with a proposer; clients may be stateless, the system may have arbitrary numbers of clients.
+  \item [Proposers] perform the initialization by communicating with acceptors. Proposers keep minimal state needed to generate unique increasing update IDs (ballot numbers), the system may have arbitrary numbers of proposers.
+  \item [Acceptors] store the accepted value, the system should have $2F+1$ acceptors to tolerate $F$ failures.
+\end{description}
 
 \begin{figure}[!h]
   \centering
@@ -273,7 +275,7 @@ $$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val\; \mbox{else}\; x$$
 as the change function then it indeed becomes identical.
 
 We may use the following change functions to turn CASPaxos into a distributed compare and set register:
-\begin{enumerate}
+\begin{itemize}
   \item To {\bf initialize} a register with $val_0$ value
   $$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; (0, val_0)\; \mbox{else}\; x$$
   
@@ -282,7 +284,7 @@ We may use the following change functions to turn CASPaxos into a distributed co
   
   \item To {\bf read} a value
   $$x \to x$$
-\end{enumerate}
+\end{itemize}
 
 With this specialization, the protocol is almost indistinguishable from Bizur\cite{bizur}.
 
@@ -374,10 +376,10 @@ A multi-step removal process fixes this problem.
 
 \begin{enumerate}
   \item On a delete request a system writes an empty value with regular $F+1$ "accept" quorum, schedules a garbage collection operation and confirms the request to a client.
-  \item The garbage collection operation in the background:
+  \item The garbage collection operation (in the background):
   \begin{enumerate}
     \item Replicates an empty value to all nodes by reading it with $2F+1$ quorum size.
-    \item If at least one node is down the operation reschedules itself.
+    \item Reschedules itself if at least one node is down.
     \item Removes the empty register from every acceptor.
   \end{enumerate}
 \end{enumerate}
@@ -387,7 +389,7 @@ A multi-step removal process fixes this problem.
 \subsection{Low latency}
 
 The following behaviour helps CASPaxos achieve low latency:
-\begin{itemize}
+\begin{itemize}[noitemsep]
   \item CASPaxos isn't leader based so a proposer should not forward all requests to a specific node to start executing them.
   \item Requests affecting different key/value pairs do not interfere.
   \item It uses 1RTT when the requests affecting the same key land on the same proposer.

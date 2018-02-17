@@ -25,8 +25,7 @@
 \usepackage{mathtools}
 \DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
 
-%\usepackage[colorlinks=true,urlcolor=blue,linkcolor=blue]{hyperref}
-\usepackage{hyperref}
+\usepackage[colorlinks=true,urlcolor=blue,linkcolor=blue]{hyperref}
 
 \begin{document}
 
@@ -37,9 +36,9 @@
 \maketitle
 
 \begin{abstract}
-CASPaxos is a replicated state machine (RSM) protocol, an extension of Synod (Single Decree Paxos). Unlike Raft and Multi-Paxos, it doesn't use leader election and log replication, so it avoids associated complexity. Its symmetric peer-to-peer approach achieves optimal commit latency in the wide-area network and doesn't cause cluster unavailability when a node crashes.
+CASPaxos is a replicated state machine (RSM) protocol, an extension of Synod (Single Decree Paxos). Unlike Raft and Multi-Paxos, it doesn't use leader election and log replication, so it avoids associated complexity. Its symmetric peer-to-peer approach achieves optimal commit latency in the wide-area network and doesn't cause cluster unavailability when any $\floor{N/2}$ of $N$ nodes crash.
 
-The lightweight nature of CASPaxos creates new applications of RSMs, e.g. instead of representing a key/value storage as a single RSM; it's possible to run an instance of CASPaxos per key to increase fault tolerance and improve performance on multi-core systems.
+The lightweight nature of CASPaxos allows new combinations of RSMs in the designs of distributed systems. For example, a representation of a key/value storage as a hashtable with independent RSM per key increases fault tolerance and improves performance on multi-core systems compared with a hashtable behind a single RSM.
 
 This paper describes CASPaxos protocol, formally proves its safety properties, covers cluster membership change and evaluates the benefits of a CASPaxos-based key/value storage.
 \end{abstract}
@@ -70,7 +69,7 @@ Besides complexity, those protocols have temporary availability problems when a 
 Traditional Paxos variants are sensitive to both long-term and transient load spikes and network delays that increase latency at the master \ldots{} this single-master optimization can harm availability: if the master fails, the system cannot service requests until a new master is elected \ldots{} Multi-Paxos has high latency because the local replica must forward all commands to the stable leader.
 \end{quote}
 
-{\bf Contributions.} I present CASPaxos, a novel protocol for building RSM that avoids complexity and pitfalls of log-based systems.
+{\bf Contributions.} I present CASPaxos, a novel protocol for building RSM that avoids complexity and pitfalls of the log-based systems.
 
 Multi-Paxos based system is a RSM built on top of a replicated log which treats every log entry as a command. The replicated log is modelled as an array of Synod instances. According to Raft paper, its complexity comes from the composition rules:
 
@@ -80,13 +79,13 @@ We hypothesize that Paxos’ opaqueness derives from its choice of the single-de
 One reason is that there is no widely agreed upon algorithm for multi-Paxos. Lamport’s descriptions are mostly about single-decree Paxos; he sketched possible approaches to multi-Paxos, but many details are missing. As a result, practical systems bear little resemblance to Paxos. Each implementation begins with Paxos, discovers the difficulties in implementing it, and then develops a significantly different architecture \ldots{} real implementations are so different from Paxos that the proofs have little value
 \end{quote}
 
-CASPaxos extends Synod instead of using it as a building block, so there is no composition and the associated complexity.
+Instead of using Synod as a building block CASPaxos extends it, so there is no composition and the associated complexity.
 
 According to an experimental study\cite{raft} and the number of open source implementations\footnote{\href{https://raft.github.io/\#implementations}{https://raft.github.io/\#implementations}} Raft succeeded in its goal to be understandable. However, its complexity is still comparable with Multi-Paxos: both systems\cite{chubby}\cite{raft} have several thousand of lines of code, both use concepts of leader election and leases, both are based on logs and require log compaction. CASPaxos is significantly simpler: it doesn't have those pieces and its implementation\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is less than 500 lines of code.
 
 Being just an extension of Synod, CASPaxos uses its symmetric peer-to-peer approach and automatically achieves the goals set in the EPaxos\cite{epaxos} paper: (1) optimal commit latency in the wide-area when tolerating one and two failures, under realistic conditions; (2) uniform load balancing across all replicas (thus achieving high throughput); and (3) graceful performance degradation when replicas are slow or crash.
 
-{\bf Verification}. The formal proof is included into the appendix \ref{appendix:proof}, Tobias Schottdorf\footnote{\href{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}} and Greg Rogers\footnote{\href{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}} model checked the protocol with TLA+ models, and the implementation was successfully tested with faults injection methodology.
+{\bf Verification}. The formal proof is included into the appendix \ref{appendix:proof}, Tobias Schottdorf\footnote{\href{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}{https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap}} and Greg Rogers\footnote{\href{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}{https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e}} independently model checked the protocol with TLA+, and the implementation was successfully tested with faults injection methodology.
 
 \section{Algorithm}
 
@@ -94,11 +93,11 @@ We begin by briefly describing the Synod protocol from the perspective of master
 
 \subsection{Synod}
 
-An implementation of the Synod protocol is an initializable only once distributed register. When several clients try to initialize it concurrently, the requests either prevent each other from continuing, or a single initialization succeeds. Once a client receives a confirmation, all the follow-up initializations must return the already accepted value.
+An implementation of the Synod protocol is an initializable only once distributed register. When several clients try to initialize it concurrently, the requests either prevent each other from continuing, or a single initialization succeeds. Once a client receives a confirmation, all the follow-up initializations must return the already chosen value.
 
 The register belongs to the CP category of the CAP theorem, so it gives up availability when more than $\floor{N/2}$ nodes are down but always preserves consistency (safety, linearizability).
 
-The roles of the nodes in the system are:
+The system has three roles.
 
 \begin{description}[align=left]
   \item [Clients] initiate a request by communicating with a proposer; clients may be stateless, the system may have arbitrary numbers of clients.
@@ -147,7 +146,7 @@ The roles of the nodes in the system are:
   \end{tikzpicture}
 \end{figure}
 
-It's convenient to use tuples as ballot numbers, to generate it a proposer combines a local increasing counter with its proposer's numerical ID: (counter, ID). To compare ballot tuples, we should compare the first component of the tuples and use ID only as a tiebreaker.
+It's convenient to use tuples as ballot numbers. To generate it a proposer combines its numerical ID with a local increasing counter: (counter, ID). To compare ballot tuples, we should compare the first component of the tuples and use ID only as a tiebreaker.
 
 When a proposer receives a conflicting message from an acceptor, it should fast-forward its counter to avoid a conflict in the future.
 
@@ -197,9 +196,9 @@ Let's review the Synod and CASPaxos protocols step-by-step.
   
   %\hline
   
-  Persists the ballot number as a promise and returns a confirmation either with an empty value (if it hasn't accepted any value yet) or with a tuple with an accepted value and its ballot number.
+  Persists the ballot number as a promise and returns a confirmation either with an empty value (if it hasn't accepted any value yet) or with a tuple of an accepted value and its ballot number.
   &
-  Persists the ballot number as a promise and returns a confirmation either with an empty value (if it hasn't accepted any value yet) or with a tuple with an accepted value and its ballot number.
+  Persists the ballot number as a promise and returns a confirmation either with an empty value (if it hasn't accepted any value yet) or with a tuple of an accepted value and its ballot number.
   \\[6pt]
   
   \hline
@@ -273,7 +272,7 @@ Let's review the Synod and CASPaxos protocols step-by-step.
 As you could notice, the CASPaxos's state transition is almost identical to the Synod's initialization. 
 
 If we use
-$$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val\; \mbox{else}\; x$$
+$$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val_0\; \mbox{else}\; x$$
 as the change function then it indeed becomes identical.
 
 We may use the following change functions to turn CASPaxos into a distributed compare and set register:
@@ -301,12 +300,12 @@ In this case, a proposer caches the last written value, and the clients should u
 Cluster membership change is a process of changing the set of nodes executing a distributed system without violating safely and liveness properties. It's crucial to have this process because it solves two problems:
 
 \begin{enumerate}
-  \item {\it How to change fault tolerance properties of a system}. With time the fault tolerant requirements may change. Since a CASPaxos based system of size $N$ tolerates up to $\floor{N/2}$ crashes, a way to increasing/ decreasing size of a cluster is also a way to increasing/decrease resiliency of the system.
+  \item {\it How to adjust fault tolerance properties of a system}. With time the fault tolerant requirements may change. Since a CASPaxos based system of size $N$ tolerates up to $\floor{N/2}$ crashes, a way to increase/decrease size of a cluster is also a way to increase/decrease resiliency of the system.
 
-  \item {\it How to replace permanently failed nodes.} CASPaxos tolerates transient failures but when the failures are permanent eventually more than $\floor{N/2}$ nodes crash, and the system becomes unavailable. A replacement of a failed node in the $N$ nodes cluster can be modelled as a shrinkage to $N-1$ followed by expansion to $N$.
+  \item {\it How to replace permanently failed nodes.} CASPaxos tolerates transient failures but the hardware tend to break, so without a replacement eventually more than $\floor{N/2}$ nodes crash and the system becomes unavailable. A replacement of a failed node in the $N$ nodes cluster can be modelled as a shrinkage to $N-1$ nodes followed by expansion to $N$.
 \end{enumerate}
 
-The process of membership change is based on Raft's idea of joint consensus where the majorities of two different configurations overlap during transitions. It allows the cluster to continue operating normally during the configuration changes.
+The process of membership change is based on Raft's idea of joint consensus where two different configurations overlap during transitions. It allows the cluster to continue operating normally during the configuration changes.
 
 The proof of applicability of this idea to CASPaxos is based on two observations:
 
@@ -325,9 +324,9 @@ to $A_1 \cdots A_{2F+2}$:
   \item Connect to each proposer and update its configuration to send "prepare" messages to the $A_1 \cdots A_{2F+2}$ set of acceptors and to require $F+2$ confirmations.
 \end{enumerate}
 
-From the perspective of the $2F+1$ nodes cluster, the second step can be explained with the filter equivalence principle, so the system keeps being correct. When all proposers are modified the system works as a $2F+2$ nodes cluster with $F+1$ "prepare" quorum and $F+2$ "accept" quorum.
+From the perspective of the $2F+1$ nodes cluster, the second step can be explained with the filter equivalence principle, so the system keeps being correct. When all proposers are modified the system also works as a $2F+2$ nodes cluster with $F+1$ "prepare" quorum and $F+2$ "accept" quorum.
 
-After read operation finishes the state of the cluster becomes valid from the $F+2$ perspective, so we can forget the about the $F+1$ interpretation. The last step switches the system from the reduced "prepare" quorum to the regular.
+After the read operation finishes the state of the cluster becomes valid from the $F+2$ perspective, so we can forget the about the $F+1$ interpretation. The last step switches the system from the reduced "prepare" quorum to the regular.
 
 The protocol for changing the set of acceptors from $A_1 \cdots A_{2F+2}$ to \\
 $A_1 \cdots A_{2F+3}$ is simpler because we can treat a $2F+2$ nodes cluster as a $2F+3$ nodes cluster where one node had been down from the beginning:
@@ -336,7 +335,7 @@ $A_1 \cdots A_{2F+3}$ is simpler because we can treat a $2F+2$ nodes cluster as 
   \item Turn on the $A_{2f+3}$ acceptor.
 \end{enumerate}
 
-The same steps should be executed in the reverse order to reduce the size of the cluster
+The same steps should be executed in the reverse order to reduce the size of the cluster.
 
 {\it How many crashes can we tolerate if the crashes occur while the reconfiguration is in progress?} During and after each step the system is correct either from the perspective of previous or next configuration so it tolerates the number of failures the configuration allows.
 
@@ -356,7 +355,7 @@ Gryadka\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka
 
 \subsection{How to delete a record}
 
-The proposed variant of CASPaxos supports only update (change) operation so to delete a value a client should update a register with an empty value. The downside of this approach is the space inefficiency: even when the value is empty the system still spends space to maintain information about the register: a promise and an associated ballot number.
+The proposed variant of CASPaxos supports only update (change) operation so to delete a value a client should update a register with an empty value (a tombstone). The downside of this approach is the space inefficiency: even when the value is empty the system still spends space to maintain information about the register: a promise and an associated ballot number.
 
 A straightforward removal of this information may introduce consistency issues. Consider the following state of the acceptors.
 
@@ -380,9 +379,9 @@ A multi-step removal process fixes this problem.
   \item On a delete request a system writes an empty value with regular $F+1$ "accept" quorum, schedules a garbage collection operation and confirms the request to a client.
   \item The garbage collection operation (in the background):
   \begin{enumerate}
-    \item Replicates an empty value to all nodes by reading it with $2F+1$ quorum size.
+    \item Replicates an empty value to all nodes by executing the  identity transform with $2F+1$ quorum size.
     \item Reschedules itself if at least one node is down.
-    \item Removes the empty register from every acceptor if ballot number is intact, do nothing otherwise
+    \item Removes the empty register from every acceptor if ballot number is intact, do nothing otherwise.
   \end{enumerate}
 \end{enumerate}
 
@@ -405,7 +404,7 @@ Something is possible with Multi-Paxos or Raft but something isn't. The EPaxos p
 Multi-Paxos has high latency because the local replica must forward all commands to the stable leader \ldots when performing geo-replication, clients incur additional latency for communicating with a remote master
 \end{quote}
 
-The Bizur paper focuses on another log related latency degradation:
+The Bizur paper\cite{bizur} focuses on another log related latency degradation:
 
 \begin{quote}
 A single slow operation will increase the latency of all succeeding operations, until the slow operation is committed. For example, a network packet drop will affect multiple ongoing operations (instead of affecting just the operation within the dropped packet)
@@ -457,7 +456,7 @@ Gryadka doesn't forward requests so the corresponding estimated latencies are $4
 
 Network fluctuations may explain the minor difference between estimated and measured latencies.
 
-As you see, the underlying consensus protocol plays an important role in the performance of the system.
+As we see, the underlying consensus protocol plays an important role in the performance of the system.
 
 \subsection{Fault-tolerance}
 
@@ -467,7 +466,7 @@ The EPaxos paper explains how leader based consensus protocols lead to cluster-w
   With Multi-Paxos, or any variant that relies on a stable leader, a leader failure prevents the system from processing client requests until a new leader is elected. Although clients could direct their requests to another replica (after they time out), a replica will usually not try to become the new leader immediately
 \end{quote}
 
-CASPaxos doesn't suffer from this behaviour because all of its nodes are homogeneous and isolation of one of them doesn't affect processes running against the others. An experimental study\footnote{\href{https://github.com/rystsov/perseus}{https://github.com/rystsov/perseus}} of distributed consistent databases with default settings during leader isolation supports this a priori reasoning:
+CASPaxos doesn't suffer from this behaviour because all of its nodes in each role are homogeneous and isolation of one of them doesn't affect processes running against the others. An experimental study\footnote{\href{https://github.com/rystsov/perseus}{https://github.com/rystsov/perseus}} of distributed consistent databases with default settings during leader isolation supports this a priori reasoning - all systems but Gryadka have non-zero unavailability window:
 
 \begin{figure}[!h]
   \centering
@@ -488,11 +487,11 @@ CASPaxos doesn't suffer from this behaviour because all of its nodes are homogen
   \end{tabular}
 \end{figure}
 
-In every system but Gryadka unavailability window is a configuration parameter depending on RTT between nodes\footnote{\href{https://coreos.com/etcd/docs/latest/tuning.html}{https://coreos.com/etcd/docs/latest/tuning.html}} so it doesn't matter which value each system has. It only matters weather it's zero or not.
+Please avoid comparing systems by that window because it's a configuration parameter depending on RTT between nodes\footnote{\href{https://coreos.com/etcd/docs/latest/tuning.html}{https://coreos.com/etcd/docs/latest/tuning.html}} and different databases have different defaults.
 
 \section{Comparison with Related Work}
 
-Raft\cite{raft} is similar to CASPaxos in its origin: both were created as an attempt to overcome the complexity of Multi-Paxos. Raft uses the same concepts as Multi-Paxos like leader election and log replication but rearranges them differently with focus on understandability. CASPaxos chooses a different foundation and has less moving parts. As a result, its implementation is $\frac{1}{4}$ of Raft's regarding lines of code and the symmetric peer-to-peer approach allows it to experience isolation of a node without impacting clients.
+Raft\cite{raft} is similar to CASPaxos in its origin: both were created as an attempt to overcome the complexity of Multi-Paxos. Raft uses the same concepts as Multi-Paxos like leader election and log replication but rearranges them differently with focus on understandability. CASPaxos chooses a different foundation and has less moving parts. As a result, its implementation is $\frac{1}{4}$ of Raft's regarding the lines of code and the symmetric peer-to-peer approach allows it to experience isolation of a node without impacting clients.
 
 Bizur\cite{bizur} is a protocol for building key-value storages; it relates to CASPaxos the same way as Synod does. CASPaxos is a replicated state machine which allows clients to submit functions to change its state. By choosing one set of functions, we specialize it to be a write-once register, Synod; by choosing another set, we get a rewritable register, Bizur. However, the Bizur paper doesn't specify how to remove values (buckets) other than by creating tombstones.
 
@@ -525,9 +524,9 @@ The protocol has the formal proof, was model checked with TLA+ and the implement
 
 \theoremstyle{definition}
 \begin{definition}{\bf("is a descendant" relation)}
-  What does it mean that one event is a descendant of another? Informally it means that there is a chain of state transitions leading from state acknowledged in the initial event to the state acknowledged in the final event. Let's formalize it. We start by defining this relation between the successfully accepted message events and then expend it to $\bar{E}^2$. Accepted message events happen on acceptors, for each acknowledged message event there are at least $F+1$ accepted message events, a set of such events is denoted as $\ddot{E}^2$.
+  What does it mean that one event is a descendant of another? Informally it means that there is a chain of state transitions leading from the state acknowledged in the initial event to the state acknowledged in the final event. Let's formalize it. We start by defining this relation between the successfully accepted message events and then expend it to $\bar{E}^2$. Accepted message events happen on acceptors, for each acknowledged message event there are at least $F+1$ accepted message events, the set of such events is denoted as $\ddot{E}^2$.
 
-  By definition of CASPaxos any accepted state is a function of previously accepted state, so
+  By definition of CASPaxos, any accepted state is a function of previously accepted state, so
   
   \begin{equation} \label{eq:chain}
     \forall x \in \ddot{E}^2 \quad \exists ! f \quad \exists ! y \in \ddot{E}^2 : s(x) = f(s(y))
@@ -657,7 +656,7 @@ Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised 
   For $x$ in $P$, $x.ret$ is the latest accepted state, let's write it formally.
 
   \begin{equation} \label{eq:last}
-    \forall k \in P \; k.ret.b = \max \{ l.b \;|\;l \in A \land l.ts < k.ts \} \\
+    \forall k \in P \quad k.ret.b = \max \{ l.b \;|\;l \in A \land l.ts < k.ts \} \\
   \end{equation}
 
   Since $w.b < u.b$, $w \in A$ and $u \in P$
@@ -669,7 +668,7 @@ Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised 
   With combination with \ref{eq:last} it implies:
 
   \begin{equation} \label{eq:final}
-    x.b = w.b \leq \max \{ z \in A, z.ts < u.ts \} = u.ret.b
+    x.b = w.b \leq \max \{ z.b \in A, z.ts < u.ts \} = u.ret.b
   \end{equation}
 
   By definition a proposer picks the value with max ballot number as the current state out of quorum of promise confirmations, so:

@@ -47,7 +47,7 @@ This paper describes CASPaxos protocol, formally proves its safety properties, c
 
 Multi-Paxos\cite{lamport01} and Raft\cite{raft} protocols allow a collection of machines to work as a single state machine tolerating failures and network issues. The protocols guarantee safety in the presence of arbitrary node crashes, message loss and reordering; and preserve liveness when at most $\floor{N/2}$ of $N$ machines are down or disconnected.
 
-RSMs and fault-tolerant linearizable (strong consistency) storages are equivalent in a sense that one can be implement via the other, and vice versa. So those protocols are widely used in the industry as a foundation of such databases as Chubby\cite{chubby}, Etcd\footnote{\href{https://github.com/coreos/etcd}{https://github.com/coreos/etcd}}, Spanner\cite{spanner}, etc.
+RSMs and fault-tolerant strongly consistent (linearizable) storages are equivalent in a sense that one can be implement via the other, and vice versa. So those protocols are widely used in the industry as a foundation of such databases as Chubby\cite{chubby}, Etcd\footnote{\href{https://github.com/coreos/etcd}{https://github.com/coreos/etcd}}, Spanner\cite{spanner}, etc.
 
 Despite the wide adoption, there are a lot of indications that Multi-Paxos and Raft are complex. Diego Ongaro and John Ousterhout write in "In Search of an Understandable Consensus Algorithm"\cite{raft}:
 

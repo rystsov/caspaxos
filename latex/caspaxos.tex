@@ -38,9 +38,9 @@
 \begin{abstract}
 CASPaxos is a replicated state machine (RSM) protocol, an extension of Synod. Unlike Raft and Multi-Paxos, it doesn't use leader election and log replication, thus avoiding associated complexity. Its symmetric peer-to-peer approach achieves optimal commit latency in the wide-area network and doesn't cause transient cluster unavailability when any $\floor{N/2}$ of $N$ nodes crash.
 
-The lightweight nature of CASPaxos allows new combinations of RSMs in the designs of distributed systems. For example, a representation of a key/value storage as a hashtable with independent RSM per key increases fault tolerance and improves performance on multi-core systems compared with a hashtable behind a single RSM.
+The lightweight nature of CASPaxos allows new combinations of RSMs in the designs of distributed systems. For example, a representation of a key-value storage as a hashtable with independent RSM per key increases fault tolerance and improves performance on multi-core systems compared with a hashtable behind a single RSM.
 
-This paper describes CASPaxos protocol, formally proves its safety properties, covers cluster membership change and evaluates the benefits of a CASPaxos-based key/value storage.
+This paper describes CASPaxos protocol, formally proves its safety properties, covers cluster membership change and evaluates the benefits of a CASPaxos-based key-value storage.
 \end{abstract}
 
 \section{Introduction}
@@ -341,15 +341,15 @@ The same steps should be executed in the reverse order to reduce the size of the
 
 WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across wide area network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos is an extension of Synod and supports FPaxos, it can benefit the idea too.
 
-\section{A CASPaxos-based key/value storage}
+\section{A CASPaxos-based key-value storage}
 
-The lightweight nature of CASPaxos opens new simple ways for designing distributed systems with complex behaviour. In this section, we'll discuss a CASPaxos-based design for a key/value storage and compare a research prototype with established databases.
+The lightweight nature of CASPaxos opens new simple ways for designing distributed systems with complex behaviour. In this section, we'll discuss a CASPaxos-based design for a key-value storage and compare a research prototype with established databases.
 
-The Raft paper\cite{raft} acknowledges that EPaxos\cite{epaxos} can achieve higher performance than Raft by using leaderless approach and exploiting commutativity in state machine commands. A key/value storage with independent operations between keys looks like a good case for the EPaxos protocol. However, it adds significant complexity.
+The Raft paper\cite{raft} acknowledges that EPaxos\cite{epaxos} can achieve higher performance than Raft by using leaderless approach and exploiting commutativity in state machine commands. A key-value storage with independent operations between keys looks like a good case for the EPaxos protocol. However, it adds significant complexity.
 
-Alternatively, instead of putting the whole key/value storage under a single RSM and using the commutativity of the commands, we can use the lightweight nature of CASPaxos to run a RSM per key achieving uniform load balancing across all replicas (thus higher throughput).
+Alternatively, instead of putting the whole key-value storage under a single RSM and using the commutativity of the commands, we can use the lightweight nature of CASPaxos to run a RSM per key achieving uniform load balancing across all replicas (thus higher throughput).
 
-Gryadka\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is a prototype of distributed key/value storage which uses that approach.
+Gryadka\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is a prototype of distributed key-value storage which uses that approach.
 
 \subsection{How to delete a record}
 
@@ -390,7 +390,7 @@ A multi-step removal process fixes this problem.
 The following behaviour helps CASPaxos achieve low latency:
 \begin{itemize}[noitemsep]
   \item CASPaxos isn't a leader-based protocol so a proposer should not forward all requests to a specific node to start executing them.
-  \item Requests affecting different key/value pairs do not interfere.
+  \item Requests affecting different key-value pairs do not interfere.
   \item It uses 1RTT when the requests affecting the same key land on the same proposer.
   \item No acceptor is special, so a proposer ignores slow acceptors and proceeds as soon as quorum is reached.
   \item An ability to use user-defined functions as state transition functions reduces two steps transition process (read, modify, write) into one step process.

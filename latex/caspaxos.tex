@@ -36,7 +36,7 @@
 \maketitle
 
 \begin{abstract}
-CASPaxos is a replicated state machine (RSM) protocol, an extension of Synod. Unlike Raft and Multi-Paxos, it doesn't use leader election and log replication, thus avoiding associated complexity. Its symmetric peer-to-peer approach achieves optimal commit latency in the wide-area network and doesn't cause transient unavailability when any $\floor{N/2}$ of $N$ nodes crash.
+CASPaxos is a replicated state machine (RSM) protocol, an extension of Synod. Unlike Raft and Multi-Paxos, it doesn't use leader election and log replication, thus avoiding associated complexity. Its symmetric peer-to-peer approach achieves optimal commit latency in wide-area networks and doesn't cause transient unavailability when any $\lfloor \frac{N-1}2 \rfloor$ of $N$ nodes crash.
 
 The lightweight nature of CASPaxos allows new combinations of RSMs in the designs of distributed systems. For example, a representation of a key-value storage as a hashtable with independent RSM per key increases fault tolerance and improves performance on multi-core systems compared with a hashtable behind a single RSM.
 
@@ -45,7 +45,7 @@ This paper describes CASPaxos protocol, formally proves its safety properties, c
 
 \section{Introduction}
 
-Multi-Paxos\cite{lamport01} and Raft\cite{raft} protocols allow a collection of nodes to work as a single state machine tolerating non-byzantine failures and network issues. The protocols guarantee safety in the presence of arbitrary node crashes, message loss and reordering; and preserve liveness when at most $\floor{N/2}$ of $N$ machines are down or disconnected.
+Multi-Paxos\cite{lamport01} and Raft\cite{raft} protocols allow a collection of nodes to work as a single state machine tolerating non-byzantine failures and network issues. The protocols guarantee safety in the presence of arbitrary node crashes, message loss and out-of-order delivery; and preserve liveness when at most $\lfloor \frac{N-1}2 \rfloor$ of $N$ machines are down or disconnected.
 
 RSMs and fault-tolerant strongly consistent (linearizable) storages are equivalent in a sense that one can be implemented via the other, and vice versa. So those protocols are widely used in the industry as a foundation of such databases as Chubby\cite{chubby}, Etcd\footnote{\href{https://github.com/coreos/etcd}{https://github.com/coreos/etcd}}, Spanner\cite{spanner}, etc.
 
@@ -95,7 +95,7 @@ We begin by briefly describing the Synod protocol from the perspective of master
 
 An implementation of the Synod protocol is an initializable-only-once distributed register. When several clients try to initialize it concurrently, the requests either prevent each other from continuing, or a single initialization succeeds. Once a client receives a confirmation, all the follow-up initializations must return the already chosen value.
 
-The register belongs to the CP category of the CAP theorem\footnote{\href{https://en.wikipedia.org/wiki/CAP\_theorem}{https://en.wikipedia.org/wiki/CAP\_theorem}}, so it gives up availability when more than $\floor{N/2}$ nodes are down but always preserves consistency (safety, linearizability).
+The register belongs to the CP category of the CAP theorem\footnote{\href{https://en.wikipedia.org/wiki/CAP\_theorem}{https://en.wikipedia.org/wiki/CAP\_theorem}}, so it gives up availability when more than $\lfloor \frac{N-1}2 \rfloor$ nodes are down but always preserves consistency (safety, linearizability).
 
 Each node in the system plays the role of client, proposer or acceptor.
 
@@ -298,9 +298,9 @@ In this case, a proposer caches the last written value, and the clients should u
 Cluster membership change is a process of changing the set of nodes executing a distributed system without violating safely and liveness properties. It's crucial to have this process because it solves two problems:
 
 \begin{enumerate}
-  \item {\it How to adjust fault tolerance properties of a system}. With time the fault tolerant requirements may change. Since a CASPaxos-based system of size $N$ tolerates up to $\floor{N/2}$ crashes, a way to increase/decrease size of a cluster is also a way to increase/decrease resiliency of the system.
+  \item {\it How to adjust fault tolerance properties of a system}. With time the fault tolerant requirements may change. Since a CASPaxos-based system of size $N$ tolerates up to $\lfloor \frac{N-1}2 \rfloor$ crashes, a way to increase/decrease size of a cluster is also a way to increase/decrease resiliency of the system.
 
-  \item {\it How to replace permanently failed nodes.} CASPaxos tolerates transient failures, but the hardware tends to break, so without a replacement eventually, more than $\floor{N/2}$ nodes crash, and the system becomes unavailable. A replacement of a failed node in the $N$ nodes cluster can be modelled as a shrinkage to $N-1$ nodes followed by expansion to $N$.
+  \item {\it How to replace permanently failed nodes.} CASPaxos tolerates transient failures, but the hardware tends to break, so without a replacement eventually, more than $\lfloor \frac{N-1}2 \rfloor$ nodes crash, and the system becomes unavailable. A replacement of a failed node in the $N$ nodes cluster can be modelled as a shrinkage to $N-1$ nodes followed by expansion to $N$.
 \end{enumerate}
 
 The process of membership change is based on Raft's idea of joint consensus where two different configurations overlap during transitions. It allows the cluster to continue operating normally during the configuration changes.

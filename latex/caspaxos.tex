@@ -36,7 +36,7 @@
 \maketitle
 
 \begin{abstract}
-CASPaxos is a replicated state machine (RSM) protocol, an extension of Synod. Unlike Raft and Multi-Paxos, it doesn't use leader election and log replication, thus avoiding associated complexity. Its symmetric peer-to-peer approach achieves optimal commit latency in the wide-area network and doesn't cause transient cluster unavailability when any $\floor{N/2}$ of $N$ nodes crash.
+CASPaxos is a replicated state machine (RSM) protocol, an extension of Synod. Unlike Raft and Multi-Paxos, it doesn't use leader election and log replication, thus avoiding associated complexity. Its symmetric peer-to-peer approach achieves optimal commit latency in the wide-area network and doesn't cause transient unavailability when any $\floor{N/2}$ of $N$ nodes crash.
 
 The lightweight nature of CASPaxos allows new combinations of RSMs in the designs of distributed systems. For example, a representation of a key-value storage as a hashtable with independent RSM per key increases fault tolerance and improves performance on multi-core systems compared with a hashtable behind a single RSM.
 
@@ -45,7 +45,7 @@ This paper describes CASPaxos protocol, formally proves its safety properties, c
 
 \section{Introduction}
 
-Multi-Paxos\cite{lamport01} and Raft\cite{raft} protocols allow a collection of machines to work as a single state machine tolerating failures and network issues. The protocols guarantee safety in the presence of arbitrary node crashes, message loss and reordering; and preserve liveness when at most $\floor{N/2}$ of $N$ machines are down or disconnected.
+Multi-Paxos\cite{lamport01} and Raft\cite{raft} protocols allow a collection of nodes to work as a single state machine tolerating non-byzantine failures and network issues. The protocols guarantee safety in the presence of arbitrary node crashes, message loss and reordering; and preserve liveness when at most $\floor{N/2}$ of $N$ machines are down or disconnected.
 
 RSMs and fault-tolerant strongly consistent (linearizable) storages are equivalent in a sense that one can be implemented via the other, and vice versa. So those protocols are widely used in the industry as a foundation of such databases as Chubby\cite{chubby}, Etcd\footnote{\href{https://github.com/coreos/etcd}{https://github.com/coreos/etcd}}, Spanner\cite{spanner}, etc.
 
@@ -537,7 +537,7 @@ The indirect contributions of our work are 1) the proof of safety properties whi
     \forall x \in \ddot{E}^2 \; \forall x \in \ddot{E}^2 \;:\; x \to y \equiv x \sim y \lor (\exists z \in \ddot{E}^2 \;:\; x \to z \land z \to y)
   \end{equation}
   
-  Let's define $x.w$ for $x \in \bar{E}^2$ as accept message events which correspond to the acknowledged change $x$. By definition the following properties hold:
+  Let's define $x.w$ for $x \in \bar{E}^2$ as accept message events which correspond to the acknowledged change $x$. By definition, the following properties hold:
   \begin{enumerate}
     \item $\forall x \in \bar{E}^2 \; x.w \subset \ddot{E}^2$
     \item $\forall x \in \bar{E}^2 \; |x.w| >= F+1$ (we require a quorum of confirmations before acknowledging a change)
@@ -562,7 +562,7 @@ The indirect contributions of our work are 1) the proof of safety properties whi
 \end{lemma}
 
 \begin{proof}
-  Let $z_0 := y$ and $z_{n+1} := I^{-1}(z_{n})$. By definition ballot numbers only increase: $z_{n+1}.b < z_{n}.b$, so we can use mathematical induction and \ref{eq:step} guarantees that $\exists k \;:\; z_k.b = x.b$ meaning $s(z_k) = s(x)$. Since $z_{k+1} \sim z_k$ we proved the following statement:
+  Let $z_0 := y$ and $z_{n+1} := I^{-1}(z_{n})$. By definition, ballot numbers only increase: $z_{n+1}.b < z_{n}.b$, so we can use mathematical induction and \ref{eq:step} guarantees that $\exists k \;:\; z_k.b = x.b$ meaning $s(z_k) = s(x)$. Since $z_{k+1} \sim z_k$ we proved the following statement:
 
   \begin{equation} \label{eq:bd}
     \forall x \in \bar{E}^2 \; \forall y \in \ddot{E}^2 \;:\; x.b < y.b \implies x \to y
@@ -580,10 +580,10 @@ The indirect contributions of our work are 1) the proof of safety properties whi
     \forall x \in \bar{E}^2 \; \forall y \in \bar{E}^2 \;:\; x \to y \lor y \to x
   \end{equation}
 
-  Which proofs the theorem \ref{th:proof}.
+  Which proves the theorem \ref{th:proof}.
 \end{proof}
 
-Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised events (happen on acceptors during the prepare phase) and $x.r$ for $x \in \ddot{E}^2$ as promised events corresponding to the acknowledged change $x$. By definition the following properties hold:
+Before proving the \ref{eq:step} let's define $\ddot{E}^1$ as a set of promised events (happen on acceptors during the prepare phase) and $x.r$ for $x \in \ddot{E}^2$ as promised events corresponding to the acknowledged change $x$. By definition, the following properties hold:
 \begin{enumerate}
   \item $\forall x \in \ddot{E}^2 \; x.r \subset \ddot{E}^1$
   \item $\forall x \in \ddot{E}^2 \; |x.r| >= F+1$ (we require a quorum of confirmations before staring the accept phase)

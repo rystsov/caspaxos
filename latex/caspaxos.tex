@@ -422,11 +422,11 @@ Each node has a colocated client which in one thread in a loop was reading a val
   \cline{2-4}
   & MongoDB (3.6.1) & Etcd (3.2.13) & Gryadka (1.61.8) \\
   \hline
-  \multicolumn{1}{|l|}{West US 2} & 530 ms & 680 ms & 46 ms \\
+  \multicolumn{1}{|l|}{West US 2} & 1086 ms & 679 ms & 47 ms \\
   \hline
-  \multicolumn{1}{|l|}{West Central US} & 586 ms & 726 ms & 46 ms \\
+  \multicolumn{1}{|l|}{West Central US} & 1168 ms & 718 ms & 47 ms \\
   \hline
-  \multicolumn{1}{|l|}{Southeast Asia} & 366 ms & 341 ms & 345 ms \\
+  \multicolumn{1}{|l|}{Southeast Asia} & 739 ms & 339 ms & 356 ms \\
   \hline
   \end{tabular}
 \end{figure}
@@ -439,20 +439,20 @@ The result matches our expectation especially if we take into account delay betw
   \cline{3-3}
   & & \multicolumn{1}{|l|}{RTT} \\
   \hline
-  \multicolumn{1}{|l|}{West US 2} & \multicolumn{1}{|l|}{West Central US} & 23.7 ms\\
+  \multicolumn{1}{|l|}{West US 2} & \multicolumn{1}{|l|}{West Central US} & 21.9 ms\\
   \hline
-  \multicolumn{1}{|l|}{West US 2} & \multicolumn{1}{|l|}{Southeast Asia} & 171.4 ms\\
+  \multicolumn{1}{|l|}{West US 2} & \multicolumn{1}{|l|}{Southeast Asia} & 169 ms\\
   \hline
-  \multicolumn{1}{|l|}{West Central US} & \multicolumn{1}{|l|}{Southeast Asia} & 191.5 ms\\
+  \multicolumn{1}{|l|}{West Central US} & \multicolumn{1}{|l|}{Southeast Asia} & 189.2 ms\\
   \hline
   \end{tabular}
 \end{figure}
 
-It happened that leaders of MongoDB and Etcd were in the "Southeast Asia" region so to execute an operation the "West US 2" node needs additional round trip to forward a request to the leader and to receive a response (171.4 ms). Then the leader needs to write the change to the majority of nodes and get confirmations (0 ms and 171.4 ms). Since the iteration consists of reading and writing operations, in total "West US 2" node requires at least $685.6 \mbox{ms} = 2 \cdot (171.4 \mbox{ms} + 171.4 \mbox{ms})$. For the "West Central US" node the estimated latency is $725.8 \mbox{ms} = 2 \cdot (191.5 \mbox{ms} + 171.4 \mbox{ms})$, for "Southeast Asia" it's $342.8 \mbox{ms} = 2 \cdot 171.4 \mbox{ms}$.
+It happened that leaders of MongoDB and Etcd were in the "Southeast Asia" region so to execute an operation the "West US 2" node needs additional round trip to forward a request to the leader and to receive a response (169 ms). Then the leader needs to write the change to the majority of nodes and get confirmations (0 ms and 169 ms). Since the iteration consists of reading and writing operations, in total "West US 2" node requires at least $676 \mbox{ms} = 2 \cdot (169 \mbox{ms} + 169 \mbox{ms})$. For the "West Central US" node the estimated latency is $716.4 \mbox{ms} = 2 \cdot (169 \mbox{ms} + 189.2 \mbox{ms})$, for "Southeast Asia" it's $338 \mbox{ms} = 2 \cdot 169 \mbox{ms}$.
 
-Gryadka doesn't forward requests so the corresponding estimated latencies are $47.4 \mbox{ms} = 2 \cdot 23.7 \mbox{ms}$, $47.4 \mbox{ms} = 2 \cdot 23.7 \mbox{ms}$ and $342.8 \mbox{ms} = 2 \cdot 171.4 \mbox{ms}$.
+Gryadka doesn't forward requests so the corresponding estimated latencies are $43.6 \mbox{ms} = 2 \cdot 21.8 \mbox{ms}$, $43.6 \mbox{ms} = 2 \cdot 21.8 \mbox{ms}$ and $338 \mbox{ms} = 2 \cdot 169 \mbox{ms}$.
 
-Network fluctuations may explain the minor difference between estimated and measured latencies.
+Network fluctuations and storage implementation details may explain the difference between estimated and measured latencies.
 
 As we see, the underlying consensus protocol plays an essential role in the performance of the system.
 

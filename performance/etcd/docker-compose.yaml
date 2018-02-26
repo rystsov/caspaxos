@@ -3,24 +3,24 @@ services:
   etcd1:
     build: db
     privileged: true
-    container_name: etcd1
-    hostname: etcd1
+    container_name: node1
+    hostname: node1
     tmpfs: /etcd/mem
     networks:
       - perseus
   etcd2:
     build: db
     privileged: true
-    container_name: etcd2
-    hostname: etcd2
+    container_name: node2
+    hostname: node2
     tmpfs: /etcd/mem
     networks:
       - perseus
   etcd3:
     build: db
     privileged: true
-    container_name: etcd3
-    hostname: etcd3
+    container_name: node3
+    hostname: node3
     tmpfs: /etcd/mem
     networks:
       - perseus

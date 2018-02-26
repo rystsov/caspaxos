@@ -3,7 +3,7 @@ const {TestAggregator} = require("./TestAggregator");
 
 const nodes = [ ];
 
-for (const [host, port] of [["mongo1", 2379],["mongo2", 2379],["mongo3", 2379]]) {
+for (const [host, port] of [["node1", 2379],["node2", 2379],["node3", 2379]]) {
     nodes.push(new RemoteTesterClient(host, port));
 }
 

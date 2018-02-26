@@ -3,24 +3,24 @@ services:
   mongo1:
     build: db
     privileged: true
-    container_name: mongo1
-    hostname: mongo1
+    container_name: node1
+    hostname: node1
     tmpfs: /mongo/mem
     networks:
       - perseus
   mongo2:
     build: db
     privileged: true
-    container_name: mongo2
-    hostname: mongo2
+    container_name: node2
+    hostname: node2
     tmpfs: /mongo/mem
     networks:
       - perseus
   mongo3:
     build: db
     privileged: true
-    container_name: mongo3
-    hostname: mongo3
+    container_name: node3
+    hostname: node3
     tmpfs: /mongo/mem
     networks:
       - perseus

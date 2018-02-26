@@ -2,7 +2,7 @@
     "acceptors": { 
         "a1": { 
             "storage": {
-                "host": "gryadka1",
+                "host": "node1",
                 "port": 6379
             }, 
             "accept": "e043ab55a3cdac18d24b3d28e2b456bfc44471ac",
@@ -11,7 +11,7 @@
         },
         "a2": { 
             "storage": {
-                "host": "gryadka2",
+                "host": "node2",
                 "port": 6379
             }, 
             "accept": "e043ab55a3cdac18d24b3d28e2b456bfc44471ac",
@@ -20,7 +20,7 @@
         },
         "a3": { 
             "storage": {
-                "host": "gryadka3",
+                "host": "node3",
                 "port": 6379
             }, 
             "accept": "e043ab55a3cdac18d24b3d28e2b456bfc44471ac",
@@ -29,19 +29,19 @@
         }
     },
     "proposers": {
-        "gryadka1": { 
+        "node1": { 
             "id": 0,
             "port": 2379, 
             "acceptors": ["a1", "a2", "a3"],
             "quorum": { "read": 2, "write": 2 }
         },
-        "gryadka2": { 
+        "node2": { 
             "id": 1,
             "port": 2379, 
             "acceptors": ["a1", "a2", "a3"],
             "quorum": { "read": 2, "write": 2 }
         },
-        "gryadka3": { 
+        "node3": { 
             "id": 2,
             "port": 2379, 
             "acceptors": ["a1", "a2", "a3"],

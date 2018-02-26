@@ -3,24 +3,24 @@ services:
   gryadka1:
     build: db
     privileged: true
-    container_name: gryadka1
-    hostname: gryadka1
+    container_name: node1
+    hostname: node1
     tmpfs: /gryadka/mem
     networks:
       - perseus
   gryadka2:
     build: db
     privileged: true
-    container_name: gryadka2
-    hostname: gryadka2
+    container_name: node2
+    hostname: node2
     tmpfs: /gryadka/mem
     networks:
       - perseus
   gryadka3:
     build: db
     privileged: true
-    container_name: gryadka3
-    hostname: gryadka3
+    container_name: node3
+    hostname: node3
     tmpfs: /gryadka/mem
     networks:
       - perseus

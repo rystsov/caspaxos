@@ -2,17 +2,17 @@
 
 me=$(hostname)
 
-etcd1=$(getent hosts etcd1 | awk '{ print $1 }')
-etcd2=$(getent hosts etcd2 | awk '{ print $1 }')
-etcd3=$(getent hosts etcd3 | awk '{ print $1 }')
+node1=$(getent hosts node1 | awk '{ print $1 }')
+node2=$(getent hosts node2 | awk '{ print $1 }')
+node3=$(getent hosts node3 | awk '{ print $1 }')
 
-if [ -z "$etcd1" ] ; then exit 1 ; fi;
-if [ -z "$etcd2" ] ; then exit 1 ; fi;
-if [ -z "$etcd3" ] ; then exit 1 ; fi;
+if [ -z "$node1" ] ; then exit 1 ; fi;
+if [ -z "$node2" ] ; then exit 1 ; fi;
+if [ -z "$node3" ] ; then exit 1 ; fi;
 
 myip=$(getent hosts $me | awk '{ print $1 }')
 
-cluster="etcd1=http://$etcd1:2380,etcd2=http://$etcd2:2380,etcd3=http://$etcd3:2380"
+cluster="node1=http://$node1:2380,node2=http://$node2:2380,node3=http://$node3:2380"
 peer="http://$myip:2380"
 client="http://$myip:2379"
 

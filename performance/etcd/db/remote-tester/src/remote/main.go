@@ -19,6 +19,7 @@ var endpoints string
 
 var mutex = &sync.Mutex{}
 var info = &StatRecord{Success: 0, Failures: 0 }
+var active = false
 
 func main() {
 	endpoints = os.Args[1]
@@ -45,7 +46,15 @@ func Init(w http.ResponseWriter, r *http.Request) {
 	kv := NewEtcdKV(endpoints)
 
 	go func() {
-        for {
+		mutex.Lock()
+		if active {
+			mutex.Unlock()
+			return
+		} else {
+			active = true
+		}
+		mutex.Unlock()
+		for {
 			value, err := kv.Get(key)
 			
 			if err == nil {

@@ -6,6 +6,7 @@ class RemoteTesterServer {
     constructor(kv, port) {
         this.kv = kv;
         this.gen = 0;
+        this.active = false;
         this.info = {
             success: 0,
             failures: 0
@@ -26,6 +27,11 @@ class RemoteTesterServer {
     }
 
     init(req, res) {
+        if (this.active) {
+            res.sendStatus(200);
+            return;
+        }
+        this.active = true;
         const key = req.params.key;
         (async () => {
             res.sendStatus(200);
@@ -40,6 +46,7 @@ class RemoteTesterServer {
                     }
                     this.info.success++;
                 } catch (e) {
+                    console.info(e);
                     this.info.failures++;
                 }
             }

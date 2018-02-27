@@ -23,6 +23,6 @@ kv.start();
 
 const service = new RemoteTesterServer(
     kv,
-    2379
+    8000
 );
 service.start();

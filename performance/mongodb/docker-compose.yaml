@@ -1,4 +1,4 @@
-version: '3'
+version: '3.5'
 services:
   mongo1:
     build: db
@@ -27,3 +27,4 @@ services:
 networks:
   perseus:
     driver: bridge
+    name: perseus

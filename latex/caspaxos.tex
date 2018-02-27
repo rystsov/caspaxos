@@ -351,7 +351,7 @@ Alternatively, instead of putting the whole key-value storage under a single RSM
 
 Gryadka\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is a prototype of distributed key-value storage which uses that approach.
 
-\subsection{How to delete a record}
+\subsection{How to delete a record}\label{deletion}
 
 CASPaxos supports only update (change) operation so to delete a value a client should update a register with an empty value (a tombstone). The downside of this approach is the space inefficiency: even when the value is empty, the system still spends space to maintain information about the register.
 
@@ -377,11 +377,14 @@ A multi-step removal process fixes this problem.
   \item On a delete request, a system writes an empty value with regular $F+1$ "accept" quorum, schedules a garbage collection operation and confirms the request to a client.
   \item The garbage collection operation (in the background):
   \begin{enumerate}
-    \item Replicates an empty value to all nodes by executing the identity transform with $2F+1$ quorum size.
-    \item Reschedules itself if at least one node is down.
-    \item Removes the empty register from every acceptor if ballot number is intact, do nothing otherwise.
+    \item Replicates an empty value to all nodes by executing the identity transform with $2F+1$ quorum size. Reschedules itself if at least one node is down.
+    \item For each proposer fast-forwards its counter to generate ballots numbers greater than tombstone's number.\label{itm:2}
+    \item Wait some time to make sure that all in-channel messages with lesser ballots were delivered.\label{itm:3}
+    \item For each acceptor removes the register if its value is empty.
   \end{enumerate}
 \end{enumerate}
+
+The steps \ref{itm:2} and \ref{itm:3} are necessary to eliminate a situation when a register was removed from $F+1$ acceptors, and they accepted value with lesser ballot number than the ballot number of the empty value still stored on other $F$ acceptors.
 
 \newpage
 
@@ -439,7 +442,7 @@ The result matches our expectation especially if we take into account delay betw
   \cline{3-3}
   & & \multicolumn{1}{|l|}{RTT} \\
   \hline
-  \multicolumn{1}{|l|}{West US 2} & \multicolumn{1}{|l|}{West Central US} & 21.9 ms\\
+  \multicolumn{1}{|l|}{West US 2} & \multicolumn{1}{|l|}{West Central US} & 21.8 ms\\
   \hline
   \multicolumn{1}{|l|}{West US 2} & \multicolumn{1}{|l|}{Southeast Asia} & 169 ms\\
   \hline
@@ -489,7 +492,7 @@ Please avoid comparing the systems by the unavailability window because it's a c
 
 \section{Comparison with Related Work}
 
-Raft\cite{raft} is similar to CASPaxos in its origin: both were created as an attempt to overcome the complexity of Multi-Paxos. Raft uses the same concepts as Multi-Paxos like leader election and log replication but rearranges them differently with a focus on understandability. CASPaxos chooses a different foundation and has less moving parts. As a result, its implementation is $\frac{1}{4}$ of Raft's regarding the lines of code and the symmetric peer-to-peer approach allows it to experience isolation of a node without impacting clients.
+Raft\cite{raft} is similar to CASPaxos in its origin: both were created as an attempt to overcome the complexity of Multi-Paxos. Raft uses the same concepts as Multi-Paxos like leader election and log replication but rearranges them differently with a focus on understandability. CASPaxos chooses a different foundation and has fewer moving parts. As a result, its implementation is $\frac{1}{4}$ of Raft's regarding the lines of code and the symmetric peer-to-peer approach allows it to experience isolation of a node without impacting clients.
 
 Bizur\cite{bizur} is a protocol for building key-value storages; it relates to CASPaxos the same way as Synod does. CASPaxos is a replicated state machine which allows clients to submit functions to change its state. By choosing one set of functions, we specialize it to be a write-once register, Synod; by choosing another set, we get a rewritable register, Bizur. However, the Bizur paper doesn't specify how to remove values (buckets) other than by creating tombstones.
 
@@ -503,6 +506,8 @@ issues during failures, they find wide adoption in the industry as a foundation 
 CASPaxos is the consensus protocol which overcomes the complexity of log-based solutions like Multi-Paxos and Raft and uses symmetric peer to peer approach to avoid the latency issues. The lightweight nature of CASPaxos allows to use it as a foundation of key-value storage with simple design and better resiliency guarantees.
 
 The indirect contributions of our work are 1) the proof of safety properties which is also applicable to the other variants of Paxos such as FPaxos, and 2) the network equivalence principle which automatically proves the preservation of properties during a transition from one configuration to another.
+
+{\bf Acknowledgements}. We thank Ezra Hoch who found a flaw in the first iteration of the deletion process \ref{deletion}.
 
 \bibliographystyle{hunsrt}
 \bibliography{bib}

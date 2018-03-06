@@ -313,7 +313,9 @@ The proof of applicability of this idea to CASPaxos is based on two observations
   \item {\bf Network equivalence} If a change in the behaviour of a Paxos-based system can be explained by delaying or omitting the messages between the nodes, then the change doesn't affect consistency because Paxos tolerates the interventions of such kind. It gives freedom in changing the system as long as the change can be modelled as a message filter on top of the unmodified system.
 \end{itemize}
 
-The protocol for changing the set of acceptors from $A_1 \cdots A_{2F+1}$ \\
+\newpage
+
+{\it Expansion of a cluster with odd number of nodes} from $A_1 \cdots A_{2F+1}$ \\
 to $A_1 \cdots A_{2F+2}$:
 \begin{enumerate}
   \item Turn on the $A_{2F+2}$ acceptor.
@@ -326,14 +328,18 @@ From the perspective of the $2F+1$ nodes cluster, the second step can be explain
 
 After the read operation finishes the state of the cluster becomes valid from the $F+2$ perspective, so we can forget the about the $F+1$ interpretation. The last step switches the system from the reduced "prepare" quorum to the regular.
 
-The protocol for changing the set of acceptors from $A_1 \cdots A_{2F+2}$ to \\
+The same sequence executed in the reverse order shrinks the size of a cluster with even number of nodes.
+
+{\it Expansion of a cluster with even number of nodes} from $A_1 \cdots A_{2F+2}$ to \\
 $A_1 \cdots A_{2F+3}$ is more straightforward because we can treat a $2F+2$ nodes cluster as a $2F+3$ nodes cluster where one node had been down from the beginning:
 \begin{enumerate}
   \item Connect to each proposer and update its configuration to send the prepare \& accept messages to the $A_1 \cdots A_{2f+3}$ set of acceptors.
   \item Turn on the $A_{2f+3}$ acceptor.
 \end{enumerate}
 
-The same steps should be executed in the reverse order to reduce the size of the cluster.
+It's important to notice that the procedure works based on the assumption that the $2f+3^{\mbox{th}}$ node has always been down. If a cluster gets into even configuration from an odd configuration, then it's necessary to execute identity state transition before the extension to avoid data loss.
+
+Indeed, if data was replicated to 3 of 5 nodes, then the cluster is shrunk by removing one node with data, and it is expanded by adding a new node then data will be replicated only to 2 of 5 nodes. Since 5 nodes cluster tolerates 2 failures, the two data nodes may go down without loss of availability and clients observe violating of linearizability.
 
 {\it How many crashes can we tolerate if the accidents occur while the reconfiguration is in progress?} During and after each step the system is correct either from the perspective of previous or next configuration, so it tolerates the number of failures the configuration allows.
 
@@ -385,8 +391,6 @@ A multi-step removal process fixes this problem.
 \end{enumerate}
 
 The steps \ref{itm:2} and \ref{itm:3} are necessary to eliminate a situation when a register was removed from $F+1$ acceptors, and they accepted value with lesser ballot number than the ballot number of the empty value still stored on other $F$ acceptors.
-
-\newpage
 
 \subsection{Low latency}
 
@@ -528,7 +532,7 @@ The indirect contributions of our work are 1) the proof of safety properties whi
 
 \theoremstyle{definition}
 \begin{definition}{\bf("is a descendant" relation)}
-  What does it mean that one event is a descendant of another? Informally it means that there is a chain of state transitions leading from the state acknowledged in the initial event to the state acknowledged in the final event. Let's formalize it. We start by defining this relation between the successfully accepted message events and then expend it to $\bar{E}^2$. Accepted message events happen on acceptors, for each acknowledged message event there are at least $F+1$ accepted message events, the set of such events is denoted as $\ddot{E}^2$.
+  What does it mean that one event is a descendant of another? Informally it means that there is a chain of state transitions leading from the state acknowledged in the initial event to the state acknowledged in the final event. Let's formalize it. We start by defining this relation between the successfully accepted message events and then expand it to $\bar{E}^2$. Accepted message events happen on acceptors, for each acknowledged message event there are at least $F+1$ accepted message events, the set of such events is denoted as $\ddot{E}^2$.
 
   By definition of CASPaxos, any accepted state is a function of previously accepted state, so
   

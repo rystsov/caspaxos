@@ -287,7 +287,7 @@ We may use the following change functions to turn CASPaxos into a distributed co
 
 With this specialization, the protocol is almost indistinguishable from Bizur\cite{bizur}.
 
-\subsubsection{One-round trip optimization}
+\subsubsection{One-round trip optimization}\label{1rtt}
 
 Since the prepare phase doesn't depend on the change function, it's possible to piggyback the next prepare message on the current accept message to reduce the number of round trips from to two to one.
 
@@ -380,17 +380,19 @@ An increasing of the "accept" quorum to $2F+1$ on writing an empty value before 
 A multi-step removal process fixes this problem.
 
 \begin{enumerate}
-  \item On a delete request, a system writes an empty value with regular $F+1$ "accept" quorum, schedules a garbage collection operation and confirms the request to a client.
+  \item On a delete request, a proposer writes a tombstone with regular $F+1$ "accept" quorum, schedules a garbage collection operation and confirms the request to a client.
   \item The garbage collection operation (in the background):
   \begin{enumerate}
-    \item Replicates an empty value to all nodes by executing the identity transform with $2F+1$ quorum size. Reschedules itself if at least one node is down.
-    \item For each proposer fast-forwards its counter to generate ballots numbers greater than tombstone's number.\label{itm:2}
-    \item Wait some time to make sure that all in-channel messages with lesser ballots were delivered.\label{itm:3}
-    \item For each acceptor removes the register if its value is empty.
+    \item Replicates an empty value to all nodes by executing the identity transform with max quorum size ($2F+1$).\label{tombstone}
+    \item Connects to each proposer, invalidates its cache associated with the removing key (see one-round trip optimization \ref{1rtt}), fast-forwards its counter to guarantee that new ballot numbers are greater than the tombstone's ballot and increments proposer's age.
+    \item For each acceptor asks to reject messages from proposers if their age is younger than the corresponding age from the previous step.
+    \item For each acceptor removes the register if its value is the tombstone from the \ref{tombstone} step.
   \end{enumerate}
 \end{enumerate}
 
-The steps \ref{itm:2} and \ref{itm:3} are necessary to eliminate a situation when a register was removed from $F+1$ acceptors, and they accepted value with lesser ballot number than the ballot number of the empty value still stored on other $F$ acceptors.
+Each step of GC process is idempotent so if any acceptor or proposer is down the process reschedules itself.
+
+Invalidation and the cache and age check are necessary to eliminate the lost delete anomaly, a situation when a proposer with cached value or a message delayed by a channel overwrite the tombstone without a causal link. The update of the counters is necessary to avoid the lost update anomaly, a situation when a concurrently updated value has lesser ballot number a reader prioritizes the tombstone over the value.
 
 \subsection{Low latency}
 

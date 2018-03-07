@@ -347,6 +347,8 @@ Indeed, if data was replicated to 3 of 5 nodes, then the cluster is shrunk by re
 
 WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across wide area network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos is an extension of Synod and supports FPaxos, it can benefit the idea too.
 
+\newpage
+
 \section{A CASPaxos-based key-value storage}
 
 The lightweight nature of CASPaxos opens new simple ways for designing distributed systems with complex behaviour. In this section, we'll discuss a CASPaxos-based design for a key-value storage and compare a research prototype with established databases.

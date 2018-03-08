@@ -328,7 +328,7 @@ From the perspective of the $2F+1$ nodes cluster, the second step can be explain
 
 After the read operation finishes the state of the cluster becomes valid from the $F+2$ perspective, so we can forget the about the $F+1$ interpretation. The last step switches the system from the reduced "prepare" quorum to the regular.
 
-The same sequence executed in the reverse order shrinks the size of a cluster with even number of nodes.
+The same sequence executed in the reverse order shrinks cluster with even number of nodes.
 
 {\it Expansion of a cluster with even number of nodes} from $A_1 \cdots A_{2F+2}$ to \\
 $A_1 \cdots A_{2F+3}$ is more straightforward because we can treat a $2F+2$ nodes cluster as a $2F+3$ nodes cluster where one node had been down from the beginning:
@@ -337,17 +337,13 @@ $A_1 \cdots A_{2F+3}$ is more straightforward because we can treat a $2F+2$ node
   \item Turn on the $A_{2f+3}$ acceptor.
 \end{enumerate}
 
-It's important to notice that the procedure works based on the assumption that the $2f+3^{\mbox{th}}$ node has always been down. If a cluster gets into even configuration from an odd configuration, then it's necessary to execute identity state transition before the extension to avoid data loss.
+It's important to notice that the procedure works based on the assumption that the $2f+3^{\mbox{th}}$ node has always been down. If a cluster gets into even configuration from an odd configuration, then it's necessary to execute identity state transition (re-scan) before the extension to avoid data loss. 
 
-Indeed, if data was replicated to 3 of 5 nodes, then the cluster is shrunk by removing one node with data, and it is expanded by adding a new node then data will be replicated only to 2 of 5 nodes. Since 5 nodes cluster tolerates 2 failures, the two data nodes may go down without loss of availability and clients observe violating of linearizability.
-
-{\it How many crashes can we tolerate if the accidents occur while the reconfiguration is in progress?} During and after each step the system is correct either from the perspective of previous or next configuration, so it tolerates the number of failures the configuration allows.
+Indeed without the mandatory re-scan, it's possible sequentially replace every acceptor with empty acceptor, lose all data and violate linearizability.
 
 \subsubsection{Low-latency and high-throughput consensus across WAN deployments}
 
 WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across wide area network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos is an extension of Synod and supports FPaxos, it can benefit the idea too.
-
-\newpage
 
 \section{A CASPaxos-based key-value storage}
 
@@ -363,7 +359,7 @@ Gryadka\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka
 
 CASPaxos supports only update (change) operation so to delete a value a client should update a register with an empty value (a tombstone). The downside of this approach is the space inefficiency: even when the value is empty, the system still spends space to maintain information about the register.
 
-A straightforward removal of this information may introduce consistency issues. Consider the following state of the acceptors.
+The straightforward removal of this information may introduce consistency issues. Consider the following state of the acceptors.
 
 \begin{figure}[!h]
   \centering
@@ -375,7 +371,7 @@ A straightforward removal of this information may introduce consistency issues. 
   \end{tabular}
 \end{figure}
 
-According to the CASPaxos protocol, a read operation (implemented as $x \to x$ change function) should return $\emptyset$. However, if we decide to remove all the information associated with the register and the read request hits the system during the process when the data on acceptors B and C have already gone then the outcome is $42$ which violates linearizability.
+According to the CASPaxos protocol, a read operation (implemented as $x \to x$ change function) should return $\emptyset$. However, if we decide to remove all information associated with the register and the read request hits the system during the process when the data on acceptors B and C have already gone then the outcome is $42$ which violates linearizability.
 
 An increasing of the "accept" quorum to $2F+1$ on writing an empty value before the removal solves the problem, but it makes the system less available since it's impossible to remove a register when at least one node is down.
 
@@ -387,14 +383,18 @@ A multi-step removal process fixes this problem.
   \begin{enumerate}
     \item Replicates an empty value to all nodes by executing the identity transform with max quorum size ($2F+1$).\label{tombstone}
     \item Connects to each proposer, invalidates its cache associated with the removing key (see one-round trip optimization \ref{1rtt}), fast-forwards its counter to guarantee that new ballot numbers are greater than the tombstone's ballot and increments proposer's age.
-    \item For each acceptor asks to reject messages from proposers if their age is younger than the corresponding age from the previous step.
-    \item For each acceptor removes the register if its value is the tombstone from the \ref{tombstone} step.
+    \item Connects to each acceptor and asks it to reject messages from proposers if their age is younger than the corresponding age from the previous step.
+    \item Removes the register from each acceptor if it contains the tombstone from the \ref{tombstone} step.
   \end{enumerate}
 \end{enumerate}
 
-Each step of GC process is idempotent so if any acceptor or proposer is down the process reschedules itself.
+Each step of the GC process is idempotent so if any acceptor or proposer is down the process reschedules itself.
 
-Invalidation and the cache and age check are necessary to eliminate the lost delete anomaly, a situation when a proposer with cached value or a message delayed by a channel overwrite the tombstone without a causal link. The update of the counters is necessary to avoid the lost update anomaly, a situation when a concurrently updated value has lesser ballot number a reader prioritizes the tombstone over the value.
+Invalidation of the proposer's caches and the age check are necessary to eliminate the lost delete anomaly, a situation when a message delayed by a channel (or an accept message corresponding to a change of the cached value) revives a value without a causal link to the deletion event.
+
+The update of the counters is necessary to avoid the lost update anomaly. It may happen when a concurrently updated value has lesser ballot number, and a reader prioritizes the tombstone over the new value.
+
+To make the age check, possible proposers should include their age into every message they send, and acceptors should persist age per proposer set by GC process.
 
 \subsection{Low latency}
 
@@ -519,6 +519,8 @@ The indirect contributions of our work are 1) the proof of safety properties whi
 
 \bibliographystyle{hunsrt}
 \bibliography{bib}
+
+\newpage
 
 \begin{appendices}
 \section{Proof}

@@ -34,6 +34,16 @@ Ezra~N Hoch, Yaniv Ben-Yehuda, Noam Lewis, and Avi Vigder.
 \newblock Bizur: A key-value consensus algorithm for scalable file-systems.
 \newblock 2017, 1702.04242.
 
+\bibitem{wpaxos}
+Ailidani Ailijiang, Aleksey Charapko, Murat Demirbas, and Tevfik Kosar.
+\newblock Wpaxos: Ruling the archipelago with fast consensus.
+\newblock 2017, 1703.08905.
+
+\bibitem{fpaxos}
+Heidi Howard, Dahlia Malkhi, and Alexander Spiegelman.
+\newblock Flexible paxos: Quorum intersection revisited.
+\newblock 2016, 1608.06696.
+
 \bibitem{abcds}
 Butler Lampson.
 \newblock The abcd's of paxos.
@@ -44,15 +54,5 @@ Leslie Lamport, Dahlia Malkhi, and Lidong Zhou.
 \newblock Vertical paxos and primary-backup replication.
 \newblock In {\em Proceedings of the 28th ACM symposium on Principles of
   distributed computing}, pages 312--313. ACM, 2009.
-
-\bibitem{fpaxos}
-Heidi Howard, Dahlia Malkhi, and Alexander Spiegelman.
-\newblock Flexible paxos: Quorum intersection revisited.
-\newblock 2016, 1608.06696.
-
-\bibitem{wpaxos}
-Ailidani Ailijiang, Aleksey Charapko, Murat Demirbas, and Tevfik Kosar.
-\newblock Wpaxos: Ruling the archipelago with fast consensus.
-\newblock 2017, 1703.08905.
 
 \end{thebibliography}

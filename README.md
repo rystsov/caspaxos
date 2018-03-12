@@ -6,6 +6,10 @@ The lightweight nature of CASPaxos allows new combinations of RSMs in the design
 
 This paper describes CASPaxos protocol, formally proves its safety properties, covers cluster membership change and evaluates the benefits of CASPaxos-based key-value storage.
 
+## Paper
+
+https://github.com/rystsov/caspaxos/blob/master/latex/caspaxos.pdf
+
 ## Implementation
 
 https://github.com/gryadka/js

@@ -47,9 +47,9 @@ This paper describes CASPaxos protocol, formally proves its safety properties, c
 
 Multi-Paxos\cite{lamport01} and Raft\cite{raft} protocols allow a collection of nodes to work as a single state machine tolerating non-byzantine failures and network issues. The protocols guarantee safety in the presence of arbitrary node crashes, message loss and out-of-order delivery; and preserve liveness when at most $\lfloor \frac{N-1}2 \rfloor$ of $N$ machines are down or disconnected.
 
-RSMs and fault-tolerant strongly consistent (linearizable) storages are equivalent in a sense that one can be implemented via the other, and vice versa. So those protocols are widely used in the industry as a foundation of such databases as Chubby\cite{chubby}, Etcd\footnote{\href{https://github.com/coreos/etcd}{https://github.com/coreos/etcd}}, Spanner\cite{spanner}, etc.
+RSMs and fault-tolerant strongly consistent (linearizable) storages are equivalent in a sense that one can be implemented via the other, and vice versa. So Multi-Paxos and Raft are widely used in the industry as a foundation of such databases as Chubby\cite{chubby}, Etcd\footnote{\href{https://github.com/coreos/etcd}{https://github.com/coreos/etcd}}, Spanner\cite{spanner}, etc.
 
-Despite the wide adoption, there are a lot of indications that Multi-Paxos and Raft are complex. Diego Ongaro and John Ousterhout write in "In Search of an Understandable Consensus Algorithm"\cite{raft}:
+Despite the wide adoption, there are a lot of indications that those protocols are complex. Diego Ongaro and John Ousterhout write in "In Search of an Understandable Consensus Algorithm"\cite{raft}:
 
 \begin{quote}
 In an informal survey of attendees at NSDI 2012, we found few people who were comfortable with Paxos, even among seasoned researchers. We struggled with Paxos ourselves; we were not able to understand the complete protocol until after reading several simplified explanations and designing our own alternative protocol, a process that took almost a year
@@ -394,7 +394,7 @@ Invalidation of the proposer's caches and the age check are necessary to elimina
 
 The update of the counters is necessary to avoid the lost update anomaly which may happen when a concurrently updated value has lesser ballot number than the tombstone's ballot number, and a reader prioritizes the tombstone over the new value.
 
-To make the age check, possible proposers should include their age into every message they send, and acceptors should persist age per proposer set by GC process.
+To make the age check possible, proposers should include their age into every message they send, and acceptors should persist age per proposer set by GC process.
 
 \subsection{Low latency}
 

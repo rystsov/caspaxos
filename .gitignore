@@ -2,3 +2,5 @@ latex/caspaxos.aux
 latex/caspaxos.log
 latex/caspaxos.out
 latex/caspaxos.blg
+.DS_Store
+latex/cas.tar

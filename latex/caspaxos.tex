@@ -475,7 +475,9 @@ The EPaxos paper explains how the leader-based consensus protocols lead to clust
   With Multi-Paxos, or any variant that relies on a stable leader, a leader failure prevents the system from processing client requests until a new leader is elected. Although clients could direct their requests to another replica (after they time out), a replica will usually not try to become the new leader immediately
 \end{quote}
 
-CASPaxos doesn't suffer from this behavior because all of its nodes of the same role are homogeneous and when any of them is isolated it doesn't affect processes running against the others. An experimental study\footnote{\href{https://github.com/rystsov/perseus}{https://github.com/rystsov/perseus}} of distributed consistent databases with default settings during a leader isolation accident supports this a priori reasoning - all systems, but Gryadka has a non-zero unavailability window:
+CASPaxos doesn't suffer from this behavior because all of its nodes of the same role are homogeneous and when any of them is isolated it doesn't affect processes running against the others. An experimental study\footnote{\href{https://github.com/rystsov/perseus}{https://github.com/rystsov/perseus}} of distributed consistent databases with default settings during a leader isolation accident supports this a priori reasoning - all systems but Gryadka has a non-zero unavailability window.
+
+Please avoid comparing the systems by the unavailability window because it's a configuration parameter depending on RTT between nodes\footnote{\href{https://coreos.com/etcd/docs/latest/tuning.html}{https://coreos.com/etcd/docs/latest/tuning.html}} and different databases have different defaults.
 
 \begin{figure}[!h]
   \centering
@@ -495,8 +497,6 @@ CASPaxos doesn't suffer from this behavior because all of its nodes of the same 
   \hline
   \end{tabular}
 \end{figure}
-
-Please avoid comparing the systems by the unavailability window because it's a configuration parameter depending on RTT between nodes\footnote{\href{https://coreos.com/etcd/docs/latest/tuning.html}{https://coreos.com/etcd/docs/latest/tuning.html}} and different databases have different defaults.
 
 \section{Comparison with Related Work}
 

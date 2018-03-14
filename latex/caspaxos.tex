@@ -329,7 +329,7 @@ The protocol for changing the set of acceptors from $A_1 \cdots A_{2F+1}$ to $A_
 
 From the perspective of the $2F+1$ nodes cluster, the second step can be explained with the network equivalence principle, so the system keeps being correct. When all proposers are modified the system also works as a $2F+2$ nodes cluster with $F+1$ "prepare" quorum and $F+2$ "accept" quorum.
 
-After the read operation finishes the state of the cluster becomes valid from the $F+2$ perspective, so we can forget the about the $F+1$ interpretation. The last step switches the system from the reduced "prepare" quorum to the regular.
+After the read operation finishes the state of the cluster becomes valid from the $F+2$ perspective, so we can forget about the $F+1$ interpretation. The last step switches the system from the reduced "prepare" quorum to the regular.
 
 The same sequence executed in the reverse order shrinks cluster with an even number of nodes.
 
@@ -343,17 +343,17 @@ The $A_1 \cdots A_{2F+2}$ to $A_1 \cdots A_{2F+3}$ extension protocal is more st
 
 It's important to notice that the procedure works based on the assumption that the $2f+3^{\mbox{th}}$ node has always been down. If a cluster gets into even configuration from an odd configuration, then it's necessary to execute identity state transition (re-scan) before the extension to avoid data loss. 
 
-Indeed without the mandatory re-scan, it's possible sequentially replace every acceptor with an empty acceptor, lose all data and violate linearizability.
+Indeed without the mandatory re-scan, it's possible to sequentially replace every acceptor with an empty acceptor, lose all data and violate linearizability.
 
 \section{A CASPaxos-based key-value storage}
 
 The lightweight nature of CASPaxos opens new simple ways for designing distributed systems with complex behavior. In this section, we'll discuss a CASPaxos-based design for a key-value storage and compare a research prototype with established databases.
 
-The Raft paper\cite{raft} acknowledges that EPaxos\cite{epaxos} can achieve higher performance than Raft by using leaderless approach and exploiting commutativity in state machine commands. A key-value storage with independent operations between keys looks like a good case for the EPaxos protocol. However, it adds significant complexity.
+The Raft paper\cite{raft} acknowledges that EPaxos\cite{epaxos} can achieve higher performance than Raft by using a leaderless approach and exploiting commutativity in state machine commands. A key-value storage with independent operations between keys looks like a good case for the EPaxos protocol. However, it adds significant complexity.
 
 Alternatively, instead of putting the whole key-value storage under a single RSM and using the commutativity of the commands, we can use the lightweight nature of CASPaxos to run a RSM per key achieving uniform load balancing across all replicas (thus higher throughput).
 
-Gryadka\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is a prototype of distributed key-value storage which uses that approach.
+Gryadka\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is a prototype of a distributed key-value storage which uses that approach.
 
 \subsection{How to delete a record}\label{deletion}
 

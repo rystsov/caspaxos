@@ -289,7 +289,7 @@ With this specialization, the protocol is almost indistinguishable from Bizur\ci
 
 \subsubsection{One-round trip optimization}\label{1rtt}
 
-Since the prepare phase doesn't depend on the change function, it's possible to piggyback the next prepare message on the current accept message to reduce the number of round trips from to two to one.
+Since the prepare phase doesn't depend on the change function, it's possible to piggyback the next prepare message on the current accept message to reduce the number of round trips from two to one.
 
 In this case, a proposer caches the last written value, and the clients should use that proposer to initiate the state transition to benefit from the optimization.
 

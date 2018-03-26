@@ -10,6 +10,17 @@ This paper describes CASPaxos protocol, formally proves its safety properties, c
 
 https://github.com/rystsov/caspaxos/blob/master/latex/caspaxos.pdf
 
-## Implementation
+## Implementations
 
-https://github.com/gryadka/js
+The algorithm is new so most implementations are actively being developed. 
+
+ * (by author of the paper) https://github.com/gryadka/js
+ * https://github.com/peterbourgon/caspaxos
+ * https://github.com/ericentin/caspax
+ * https://github.com/ReubenBond/orleans/tree/poc-caspaxos
+ * https://github.com/spacejam/sled/commits/tyler_paxos
+
+## Articles
+
+ * [Paxos on Steroids and a Crash Course in TLA+](https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap)
+ * [A TLA+ specification for Gryadka](https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e)

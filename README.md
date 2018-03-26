@@ -24,3 +24,4 @@ The algorithm is new so most implementations are actively being developed.
 
  * [Paxos on Steroids and a Crash Course in TLA+](https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap)
  * [A TLA+ specification for Gryadka](https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e)
+* [Exploring consensus via python and CASPaxos](https://www.komu.engineer/blogs/consensus)

@@ -322,8 +322,8 @@ The proof of applicability of this idea to CASPaxos is based on two observations
 The protocol for changing the set of acceptors from $A_1 \cdots A_{2F+1}$ to $A_1 \cdots A_{2F+2}$:
 \begin{enumerate}
   \item Turn on the $A_{2F+2}$ acceptor.
-  \item Connect to each proposer and update its configuration to send the "accept" messages to the $A_1 \cdots A_{2F+2}$ set of acceptors and to require $F+2$ confirmations during the "accept" phase.
-  \item Pick any proposer and execute the identity state transition function $x \to x$.
+  \item Connect to each proposer and update its configuration to send the "accept" messages to the $A_1 \cdots A_{2F+2}$ set of acceptors and to require $F+2$ confirmations during the "accept" phase.\label{dual}
+  \item Pick any proposer and execute the identity state transition function $x \to x$.\label{rescan}
   \item Connect to each proposer and update its configuration to send "prepare" messages to the $A_1 \cdots A_{2F+2}$ set of acceptors and to require $F+2$ confirmations.
 \end{enumerate}
 
@@ -343,7 +343,35 @@ The $A_1 \cdots A_{2F+2}$ to $A_1 \cdots A_{2F+3}$ extension protocal is more st
 
 It's important to notice that the procedure works based on the assumption that the $2f+3^{\mbox{th}}$ node has always been down. If a cluster gets into even configuration from an odd configuration, then it's necessary to execute identity state transition (re-scan) before the extension to avoid data loss. 
 
-Indeed without the mandatory re-scan, it's possible to sequentially replace every acceptor with an empty acceptor, lose all data and violate linearizability.
+Otherwise, it's possible to sequentially replace every acceptor with an empty acceptor, lose all data and violate linearizability.
+
+\subsubsection{Optimization}
+
+In a key-value storage implemented as an array of independent labeled CASPaxos instances, we need to perform the \ref{rescan} step for each instance (key). It results in a rescan of all record. If the storage has $K$ keys then during the $A_1 \cdots A_{2F+1}$ to $A_1 \cdots A_{2F+2}$ transition the rescan moves $K(2F+3)$ records.
+
+The goal of the identity state transition is to make the state of the cluster valid from the $F+2$ perspective. The alternative way to reach this state is to replicate a majority of $A_1 \cdots A_{2F+1}$ nodes for any moment after the \ref{dual} step into $A_{2F+2}$ resolving conflicts by choosing an accepted value with higher ballot number. Thus reducing the rescan cost from $K(2F+3)$ to $K(F+1)$.
+
+A background catch-up process keeping acceptors in sync up to some recent moment may reduce the cost further to $(K-k) + k(F+1)$ where $k$ is the number of updated keys since the last moment of sync.
+
+\subsubsection{Changing the number of proposers}
+
+Consistency and availability properties don't depend on the number of proposers so that they can be added and removed at any time. The only caveat is the procedures like shrinkage-expansion of acceptors and deletion (\ref{deletion}) which need to update all proposers as one of the steps. Fortunately, those steps are idempotent so we so we can bring a proposer down, update the list of all proposers and on the next attempt the steps succeed.
+
+An algorithm to remove a proposer:
+
+\begin{enumerate}
+  \item Turn off the proposer.
+  \item Update the list of proposers of the GC process.
+  \item Update the list of proposers of the process controlling the shrinkage-expansion of acceptors.
+\end{enumerate}
+
+An algorithm to add a proposer:
+
+\begin{enumerate}
+  \item Update the list of proposers of the process controlling the shrinkage-expansion of acceptors.
+  \item Update the list of proposers of the GC process.
+  \item Turn on the proposer.
+\end{enumerate}
 
 \section{A CASPaxos-based key-value storage}
 
@@ -379,7 +407,7 @@ A multi-step removal process fixes this problem.
 
 \begin{enumerate}
   \item On a delete request, a proposer writes a tombstone with regular $F+1$ "accept" quorum, schedules a garbage collection operation and confirms the request to a client.
-  \item The garbage collection operation (in the background):
+  \item The garbage collection operation (in the background):\label{GC}
   \begin{enumerate}
     \item Replicates an empty value to all nodes by executing the identity transform with max quorum size ($2F+1$).\label{tombstone}
     \item Connects to each proposer, invalidates its cache associated with the removing key (see one-round trip optimization \ref{1rtt}), fast-forwards its counter to be greater than the tombstone's ballot number and increments proposer's age.

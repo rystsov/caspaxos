@@ -9,5 +9,13 @@ fi
 docker run -i -t --name=caspaxos_pdflatex \
   -v $(pwd)/latex:/latex \
   caspaxos_pdflatex
-  
+
+rm latex/arxiv.tar || true
+
+pushd latex
+
+tar -cf arxiv.tar caspaxos.bbl caspaxos.tex hunsrt.bst
+
+popd
+
 docker rm caspaxos_pdflatex

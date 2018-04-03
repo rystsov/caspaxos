@@ -14,11 +14,14 @@ https://github.com/rystsov/caspaxos/blob/master/latex/caspaxos.pdf
 
 The algorithm is new so most implementations are actively being developed. 
 
- * (by author of the paper) https://github.com/gryadka/js
+ * https://github.com/gryadka/js
  * https://github.com/peterbourgon/caspaxos
  * https://github.com/ericentin/caspax
  * https://github.com/ReubenBond/orleans/tree/poc-caspaxos
  * https://github.com/spacejam/sled/commits/tyler_paxos
+
+## Talks
+ * [Papers We Love SF: Peter Bourgon on CASPaxos](https://www.youtube.com/watch?v=TW2OPHdIKsM)
 
 ## Articles
 

@@ -36,7 +36,7 @@
 \maketitle
 
 \begin{abstract}
-CASPaxos is a replicated state machine (RSM) protocol, an extension of Synod. Unlike Raft and Multi-Paxos, it doesn't use leader election and log replication, thus avoiding associated complexity. Its symmetric peer-to-peer approach achieves optimal commit latency in wide-area networks and doesn't cause transient unavailability when any $\lfloor \frac{N-1}2 \rfloor$ of $N$ nodes crash.
+CASPaxos is a replicated state machine (RSM) protocol, an extension of Synod. Unlike Raft and Multi-Paxos which replicate the log of commands, CASPaxos replicates state, thus avoiding associated complexity. Its symmetric peer-to-peer approach achieves optimal commit latency in wide-area networks and doesn't cause transient unavailability when any $\lfloor \frac{N-1}2 \rfloor$ of $N$ nodes crash.
 
 The lightweight nature of CASPaxos allows new combinations of RSMs in the designs of distributed systems. For example, a representation of key-value storage as a hashtable with independent RSM per key increases fault tolerance and improves performance on multi-core systems compared with a hashtable behind a single RSM.
 
@@ -81,7 +81,7 @@ One reason is that there is no widely agreed upon algorithm for multi-Paxos. Lam
 
 Instead of using Synod as a building block, CASPaxos extends it, so there is no composition and the associated complexity.
 
-An experimental study\cite{raft} and the number of open source implementations\footnote{\href{https://raft.github.io/\#implementations}{https://raft.github.io/\#implementations}} indicate that Raft succeeded in its goal to be understandable. However, its complexity is still comparable with Multi-Paxos: both systems\cite{chubby}\cite{raft} have several thousand of lines of code, both use concepts of leader election and leases, both are based on logs and require log compaction. CASPaxos is significantly simpler: it doesn't have those pieces and our implementation\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is less than 500 lines of code.
+An experimental study\cite{raft} and the number of open source implementations\footnote{\href{https://raft.github.io/\#implementations}{https://raft.github.io/\#implementations}} indicate that Raft is understandable. However, its complexity is still comparable with Multi-Paxos: both systems\cite{chubby}\cite{raft} have several thousand of lines of code, both use concepts of leader election and leases, both are based on logs and require log compaction. CASPaxos is simpler: it doesn't have those pieces and our implementation\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is less than 500 lines of code.
 
 Being just an extension of Synod, CASPaxos uses its symmetric peer-to-peer approach and automatically achieves the goals set in the EPaxos\cite{epaxos} paper: (1) optimal commit latency in the wide-area when tolerating one and two failures, under realistic conditions; (2) uniform load balancing across all replicas (thus achieving high throughput); and (3) graceful performance degradation when replicas are slow or crash.
 
@@ -514,7 +514,7 @@ Please avoid comparing the systems by the unavailability window because it's a c
   Database & Version & Protocol & Unavailability\\
   \hline
   \hline
-  Gryadka & 1.61.8 & CASPaxos & 0s\\
+  Gryadka & 1.61.8 & CASPaxos & $<$ 1s\\
   \hline
   CockroachDB & 1.1.3 & MultiRaft & 7s\\
   Consul & 1.0.2 & Raft & 14s\\
@@ -526,24 +526,23 @@ Please avoid comparing the systems by the unavailability window because it's a c
   \end{tabular}
 \end{figure}
 
+\newpage
+
 \section{Comparison with Related Work}
 
-Raft\cite{raft} is similar to CASPaxos in its origin: both were created as an attempt to overcome the complexity of Multi-Paxos. Raft uses the same concepts as Multi-Paxos like leader election and log replication but rearranges them differently with a focus on understandability. CASPaxos chooses a different foundation and has fewer moving parts. As a result, its implementation is $\frac{1}{4}$ of Raft's regarding the lines of code and the symmetric peer-to-peer approach allows it to experience isolation of a node without impacting clients.
+CASPaxos, Raft\cite{raft} and Multi-Paxos have different trade-offs. CASPaxos replicates state on each request, so it is impractical for RSM with a heavy monolithic state. Besides that the log concept in Raft and Multi-Paxos significantly simplifies the design of efficient transactions and the catch-up procedure. CASPaxos doesn't use leader election and log. Thus it avoids associated complexity and the lack of leader increases availability and reduces latency.
 
-Bizur\cite{bizur} is a protocol for building key-value storages; it relates to CASPaxos the same way as Synod does. CASPaxos is a replicated state machine which allows clients to submit functions to change its state. By choosing one set of functions, we specialize it to be a write-once register, Synod; by choosing another set, we get a rewritable register, Bizur. However, the Bizur paper doesn't specify how to remove values (buckets) other than by creating tombstones.
+CASPaxos is very similar to Bizur\cite{bizur}. The latter describes the design of key-value storage, but it doesn't support custom change functions and doesn't specify how to remove values (buckets) other than by creating tombstones.
 
 EPaxos\cite{epaxos} is a leaderless variant of Multi-Paxos which allows concurrent execution of non-interfering commands. CASPaxos doesn't allow concurrent state transition, but in some cases, it provides comparable functionality with simpler design. For example, key-value storage with independent operations between keys can be modeled as a single EPaxos-based RSM or as storage with a CASPaxos-based RSM per key. Both systems achieve optimal commit latency, uniform load balancing across all replicas and graceful performance degradation when replicas are slow or crash.
 
 \section{Conclusion}
 
-Despite log-based Paxos-like consensus protocols being complex and having latency
-issues during failures, they find wide adoption in the industry as a foundation of distributed databases. However many of the applications of the protocols are implementations of master-master replicated key-value storages.
-
-CASPaxos is the consensus protocol which overcomes the complexity of log-based solutions like Multi-Paxos and Raft and uses symmetric peer to peer approach to avoid the latency issues. The lightweight nature of CASPaxos allows to use it as a foundation of key-value storage with simple design and better resiliency guarantees.
+Log-based Paxos-like consensus protocols find wide adoption in the industry as a foundation of distributed databases. However many of them are key-value storages. CASPaxos is the consensus protocol which uses symmetric peer to peer approach to avoid the latency issues. The lightweight nature of CASPaxos allows to use it as a foundation of key-value storage with simple design and better resiliency guarantees.
 
 The indirect contributions of our work are 1) the proof of safety properties which is also applicable to the other variants of Paxos such as FPaxos, and 2) the network equivalence principle which automatically proves the preservation of properties during a transition from one configuration to another.
 
-{\bf Acknowledgements}. We thank Tobias Schottdorf and Greg Rogers who wrote TLA+ specs for CASPaxos, and Ezra Hoch who found a flaw in the first version of the deletion process \ref{deletion}.
+{\bf Acknowledgements}. We thank Tobias Schottdorf and Greg Rogers for writing TLA+ specs for CASPaxos,Ezra Hoch for finding a flaw in the first version of the deletion process \ref{deletion} and Peter Bourgon for valuable comments and suggestions.
 
 \bibliographystyle{hunsrt}
 \bibliography{bib}

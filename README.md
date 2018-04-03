@@ -18,7 +18,7 @@ The algorithm is new so most implementations are actively being developed.
  * https://github.com/peterbourgon/caspaxos
  * https://github.com/ericentin/caspax
  * https://github.com/ReubenBond/orleans/tree/poc-caspaxos
- * https://github.com/spacejam/sled/commits/tyler_paxos
+ * https://github.com/spacejam/sled/tree/tyler_paxos
 
 ## Talks
  * [Papers We Love SF: Peter Bourgon on CASPaxos](https://www.youtube.com/watch?v=TW2OPHdIKsM)
@@ -27,3 +27,4 @@ The algorithm is new so most implementations are actively being developed.
 
  * [Paxos on Steroids and a Crash Course in TLA+](https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap)
  * [A TLA+ specification for Gryadka](https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e)
+* [Exploring consensus via python and CASPaxos](https://www.komu.engineer/blogs/consensus)

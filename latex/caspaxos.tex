@@ -38,9 +38,7 @@
 \begin{abstract}
 CASPaxos is a replicated state machine (RSM) protocol, an extension of Synod. Unlike Raft and Multi-Paxos which replicate the log of commands, CASPaxos replicates state, thus avoiding associated complexity. Its symmetric peer-to-peer approach achieves optimal commit latency in wide-area networks and doesn't cause transient unavailability when any $\lfloor \frac{N-1}2 \rfloor$ of $N$ nodes crash.
 
-The lightweight nature of CASPaxos allows new combinations of RSMs in the designs of distributed systems. For example, a representation of key-value storage as a hashtable with independent RSM per key increases fault tolerance and improves performance on multi-core systems compared with a hashtable behind a single RSM.
-
-This paper describes CASPaxos protocol, formally proves its safety properties, covers cluster membership change and evaluates the benefits of CASPaxos-based key-value storage.
+This paper describes CASPaxos protocol, formally proves its safety properties, covers cluster membership change and evaluates the properties of CASPaxos-based key-value storage.
 \end{abstract}
 
 \section{Introduction}
@@ -79,9 +77,7 @@ We hypothesize that Paxos’ opaqueness derives from its choice of the single-de
 One reason is that there is no widely agreed upon algorithm for multi-Paxos. Lamport’s descriptions are mostly about single-decree Paxos; he sketched possible approaches to multi-Paxos, but many details are missing. As a result, practical systems bear little resemblance to Paxos. Each implementation begins with Paxos, discovers the difficulties in implementing it, and then develops a significantly different architecture \ldots{} real implementations are so different from Paxos that the proofs have little value
 \end{quote}
 
-Instead of using Synod as a building block, CASPaxos extends it, so there is no composition and the associated complexity.
-
-An experimental study\cite{raft} and the number of open source implementations\footnote{\href{https://raft.github.io/\#implementations}{https://raft.github.io/\#implementations}} indicate that Raft is understandable. However, its complexity is still comparable with Multi-Paxos: both systems\cite{chubby}\cite{raft} have several thousand of lines of code, both use concepts of leader election and leases, both are based on logs and require log compaction. CASPaxos is simpler: it doesn't have those pieces and our implementation\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is less than 500 lines of code.
+Instead of using Synod as a building block, CASPaxos extends it, so there is no composition and the associated complexity. As a result, our implementation\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is less than 500 lines of code.
 
 Being just an extension of Synod, CASPaxos uses its symmetric peer-to-peer approach and automatically achieves the goals set in the EPaxos\cite{epaxos} paper: (1) optimal commit latency in the wide-area when tolerating one and two failures, under realistic conditions; (2) uniform load balancing across all replicas (thus achieving high throughput); and (3) graceful performance degradation when replicas are slow or crash.
 
@@ -146,7 +142,7 @@ Each node in the system plays the role of client, proposer or acceptor.
   \end{tikzpicture}
 \end{figure}
 
-It's convenient to use tuples as ballot numbers. To generate it a proposer combines its numerical ID with a local increasing counter: (counter, ID). To compare ballot tuples, we should compare the first component of the tuples and use ID only as a tiebreaker.
+It's convenient to use tuples as ballot numbers. To generate it a proposer combines its comparable ID with a local increasing counter: (counter, ID). To compare ballot tuples, we should compare the first component of the tuples and use ID only as a tiebreaker.
 
 When a proposer receives a conflicting message from an acceptor, it should fast-forward its counter to avoid a conflict in the future.
 
@@ -295,7 +291,7 @@ In this case, a proposer caches the last written value, and the clients should u
 
 \subsubsection{Low-latency and high-throughput consensus across WAN deployments}
 
-WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across wide area network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos is an extension of Synod and supports FPaxos (see the proof in the appendix \ref{appendix:fpaxos}), it can benefit the idea too.
+WPaxos\cite{wpaxos} paper describes how to achieve low-latency and high-throughput consensus across wide area network through object stealing. It leverages the flexible quorums\cite{fpaxos} idea to cut WAN communication costs. Since CASPaxos is an extension of Synod and supports FPaxos (see the proof in the appendix \ref{appendix:fpaxos}), it supports the WPaxos optimization too.
 
 \subsection{Cluster membership change}
 
@@ -335,7 +331,7 @@ The same sequence executed in the reverse order shrinks cluster with an even num
 
 \subsubsection{Expansion of a cluster with an even number of nodes}
 
-The $A_1 \cdots A_{2F+2}$ to $A_1 \cdots A_{2F+3}$ extension protocal is more straightforward because we can treat a $2F+2$ nodes cluster as a $2F+3$ nodes cluster where one node had been down from the beginning:
+The $A_1 \cdots A_{2F+2}$ to $A_1 \cdots A_{2F+3}$ extension protocol is more straightforward because we can treat a $2F+2$ nodes cluster as a $2F+3$ nodes cluster where one node had been down from the beginning:
 \begin{enumerate}
   \item Connect to each proposer and update its configuration to send the prepare \& accept messages to the $A_1 \cdots A_{2f+3}$ set of acceptors.
   \item Turn on the $A_{2f+3}$ acceptor.
@@ -375,13 +371,9 @@ An algorithm to add a proposer:
 
 \section{A CASPaxos-based key-value storage}
 
-The lightweight nature of CASPaxos opens new simple ways for designing distributed systems with complex behavior. In this section, we'll discuss a CASPaxos-based design for a key-value storage and compare a research prototype with established databases.
+The lightweight nature of CASPaxos creates new ways for designing distributed systems with complex behavior. In this section, we'll discuss a CASPaxos-based design for a key-value storage and compare a research prototype with Etcd, MongoDB and other distributed databases.
 
-The Raft paper\cite{raft} acknowledges that EPaxos\cite{epaxos} can achieve higher performance than Raft by using a leaderless approach and exploiting commutativity in state machine commands. A key-value storage with independent operations between keys looks like a good case for the EPaxos protocol. However, it adds significant complexity.
-
-Alternatively, instead of putting the whole key-value storage under a single RSM and using the commutativity of the commands, we can use the lightweight nature of CASPaxos to run a RSM per key achieving uniform load balancing across all replicas (thus higher throughput).
-
-Gryadka\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is a prototype of a distributed key-value storage which uses that approach.
+Instead of designing a key-value storage as a single RSM we represent it as a set of labeled CASPaxos instances. Gryadka\footnote{\href{https://github.com/gryadka/js}{https://github.com/gryadka/js}} is a prototype implementing this idea.
 
 \subsection{How to delete a record}\label{deletion}
 
@@ -426,28 +418,16 @@ To make the age check possible, proposers should include their age into every me
 
 \subsection{Low latency}
 
-The following behavior helps CASPaxos achieve low latency:
+The following properties of CASPaxos help achieve low latency:
 \begin{itemize}[noitemsep]
-  \item CASPaxos isn't a leader-based protocol so a proposer should not forward all requests to a specific node to start executing them.
+  \item It isn't a leader-based protocol so a proposer should not forward all requests to a specific node to start executing them.
   \item Requests affecting different key-value pairs do not interfere.
   \item It uses 1RTT when the requests affecting the same key land on the same proposer.
   \item No acceptor is special, so a proposer ignores slow acceptors and proceeds as soon as quorum is reached.
   \item An ability to use user-defined functions as state transition functions reduces two steps transition process (read, modify, write) into one step process.
 \end{itemize}
 
-We can't get the same behavior from the Multi-Paxos or Raft based systems, so their latency is higher. The EPaxos paper emphasizes the following latency issue of the leader-based consensus protocols:
-
-\begin{quote}
-Multi-Paxos has high latency because the local replica must forward all commands to the stable leader \ldots when performing geo-replication, clients incur additional latency for communicating with a remote master
-\end{quote}
-
-The Bizur paper\cite{bizur} focuses on another log related latency degradation:
-
-\begin{quote}
-A single slow operation will increase the latency of all succeeding operations, until the slow operation is committed. For example, a network packet drop will affect multiple ongoing operations (instead of affecting just the operation within the dropped packet)
-\end{quote}
-
-Let's compare Gryadka, an experimental CASPaxos-based key-value storage, with the established storages Etcd and MongoDB to check how this a priori reasoning matches the real world.
+Let's compare Gryadka with Etcd and MongoDB to see it.
 
 All storages were tested in the same environment. Gryadka, Etcd, and MongoDB were using three DS4\_V2 nodes configuration deployed over WAN in the Azure's\footnote{\href{https://azure.microsoft.com}{https://azure.microsoft.com}} datacenters in the "West US 2", "West Central US" and "Southeast Asia" regions.
 
@@ -487,7 +467,7 @@ The result matches our expectation especially if we take into account delay betw
   \end{tabular}
 \end{figure}
 
-It happened that leaders of MongoDB and Etcd were in the "Southeast Asia" region so to execute an operation the "West US 2" node needs additional round trip to forward a request to the leader and to receive a response (169 ms). Then the leader needs to write the change to the majority of nodes and get confirmations (0 ms and 169 ms). Since the iteration consists of reading and writing operations, in total "West US 2" node requires at least $676 \mbox{ms} = 2 \cdot (169 \mbox{ms} + 169 \mbox{ms})$. For the "West Central US" node the estimated latency is $716.4 \mbox{ms} = 2 \cdot (169 \mbox{ms} + 189.2 \mbox{ms})$, for "Southeast Asia" it's $338 \mbox{ms} = 2 \cdot 169 \mbox{ms}$.
+The leaders of MongoDB and Etcd were in the "Southeast Asia" region so to execute an operation the "West US 2" node needs additional round trip to forward a request to the leader and to receive a response (169 ms). Then the leader needs to write the change to the majority of nodes and get confirmations (0 ms and 169 ms). Since the iteration consists of reading and writing operations, in total "West US 2" node requires at least $676 \mbox{ms} = 2 \cdot (169 \mbox{ms} + 169 \mbox{ms})$. For the "West Central US" node the estimated latency is $716.4 \mbox{ms} = 2 \cdot (169 \mbox{ms} + 189.2 \mbox{ms})$, for "Southeast Asia" it's $338 \mbox{ms} = 2 \cdot 169 \mbox{ms}$.
 
 Gryadka doesn't forward requests so the corresponding estimated latencies are $43.6 \mbox{ms} = 2 \cdot 21.8 \mbox{ms}$, $43.6 \mbox{ms} = 2 \cdot 21.8 \mbox{ms}$ and $338 \mbox{ms} = 2 \cdot 169 \mbox{ms}$.
 
@@ -538,11 +518,11 @@ EPaxos\cite{epaxos} is a leaderless variant of Multi-Paxos which allows concurre
 
 \section{Conclusion}
 
-Log-based Paxos-like consensus protocols find wide adoption in the industry as a foundation of distributed databases. However many of them are key-value storages. CASPaxos is the consensus protocol which uses symmetric peer to peer approach to avoid the latency issues. The lightweight nature of CASPaxos allows to use it as a foundation of key-value storage with simple design and better resiliency guarantees.
+CASPaxos is a replicated state machine protocol which doesn't use leader election and replicates state instead of the command log. This design decision helps to avoid availability implications of having a leader and additional complexity caused by logs. The possible applications of the protocol are key-value storages and stateful actor based services.
 
 The indirect contributions of our work are 1) the proof of safety properties which is also applicable to the other variants of Paxos such as FPaxos, and 2) the network equivalence principle which automatically proves the preservation of properties during a transition from one configuration to another.
 
-{\bf Acknowledgements}. We thank Tobias Schottdorf and Greg Rogers for writing TLA+ specs for CASPaxos,Ezra Hoch for finding a flaw in the first version of the deletion process \ref{deletion} and Peter Bourgon for valuable comments and suggestions.
+{\bf Acknowledgements}. We thank Tobias Schottdorf and Greg Rogers for writing TLA+ specs for CASPaxos,Ezra Hoch for finding a flaw in the draft of the deletion process \ref{deletion} and Peter Bourgon for valuable comments and suggestions.
 
 \bibliographystyle{hunsrt}
 \bibliography{bib}

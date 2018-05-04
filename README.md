@@ -29,5 +29,6 @@ The algorithm is new so most implementations are actively being developed.
  * [Paxos on Steroids and a Crash Course in TLA+](https://tschottdorf.github.io/single-decree-paxos-tla-compare-and-swap)
  * [A TLA+ specification for Gryadka](https://medium.com/@grogepodge/tla-specification-for-gryadka-c80cd625944e)
  * [A Proof of Correctness for CASPaxos](http://justinjaffray.com/blog/posts/2018-04-10-caspaxos/)
+ * [Ben Linsay on CASPaxos](https://medium.com/@blinsay/caspaxos-a8f6b3cf5515)
  * [Описание CASPaxos на русском](https://github.com/eshlykov/distributed-computing-course/blob/1c1a117a63c4b625e8ecf31e76c299efd5da3852/caspaxos.md)
  * [Exploring consensus via python and CASPaxos](https://www.komu.engineer/blogs/consensus)

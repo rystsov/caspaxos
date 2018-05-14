@@ -351,7 +351,7 @@ A background catch-up process keeping acceptors in sync up to some recent moment
 
 \subsubsection{Changing the number of proposers}
 
-Consistency and availability properties don't depend on the number of proposers so that they can be added and removed at any time. The only caveat is the procedures like shrinkage-expansion of acceptors and deletion (\ref{deletion}) which need to update all proposers as one of the steps. Fortunately, those steps are idempotent so we so we can bring a proposer down, update the list of all proposers and on the next attempt the steps succeed.
+Consistency and availability properties don't depend on the number of proposers so that they can be added and removed at any time. The only caveat is the procedures like shrinkage-expansion of acceptors and deletion (\ref{deletion}) which need to update all proposers as one of the steps. Fortunately, those steps are idempotent so we can bring a proposer down, update the list of all proposers and on the next attempt the steps succeed.
 
 An algorithm to remove a proposer:
 

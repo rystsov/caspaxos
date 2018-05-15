@@ -556,7 +556,7 @@ The indirect contributions of our work are 1) the proof of safety properties whi
   Where $s(x)$ is a state accepted by an acceptor resulting in event $x$. When \ref{eq:chain} holds for $x$ and $y$ we write $y \sim x$ and $y = I^{-1}(x)$. Now we can define "is a descendant" relation between $\ddot{E}^2$ events as:
   
   \begin{equation}
-    \forall x \in \ddot{E}^2 \; \forall x \in \ddot{E}^2 \;:\; x \to y \equiv x \sim y \lor (\exists z \in \ddot{E}^2 \;:\; x \to z \land z \to y)
+    \forall x \in \ddot{E}^2 \; \forall y \in \ddot{E}^2 \;:\; x \to y \equiv x \sim y \lor (\exists z \in \ddot{E}^2 \;:\; x \to z \land z \to y)
   \end{equation}
   
   Let's define $x.w$ for $x \in \bar{E}^2$ as accept message events which correspond to the acknowledged change $x$. By definition, the following properties hold:

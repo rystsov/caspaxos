@@ -304,7 +304,7 @@ As we see, the CASPaxos's state transition is almost identical to the Synod's in
 $$x \to \mbox{if}\; x = \emptyset \;\mbox{then}\; val_0\; \mbox{else}\; x$$
 as the change function then it indeed becomes identical.
 
-By choosing a different set of change functions, we can turn CASPaxos into a distributed register and atomically change its value with arbitrary user-defined function in one operation. For example, the following change functions implement a register with CAS.
+By choosing a different set of change functions, we can turn CASPaxos into a distributed register and atomically change its value with arbitrary user-defined function in one operation. For example, the following change functions implement a register supporting CAS.
 
 \begin{itemize}
     \item To {\bf initialize} a register with $val_0$ value

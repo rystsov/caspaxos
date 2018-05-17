@@ -1,9 +1,7 @@
 # CASPaxos
 
-CASPaxos is a wait-free, linearizable, multi-writer multi-reader register in unreliable, asynchronous networks. The register acts as a replicated state machine providing an API for changing its value by applying an arbitrary user-provided function (a command). Unlike Raft and Multi-Paxos which replicate the log of commands, CASPaxos replicates state, thus avoiding associated complexity. 
-
-Its symmetric peer-to-peer approach achieves optimal commit latency in wide-area networks and doesn’t cause temporary unavailability when any (N-1)/2 of N nodes crash. 
-
+CASPaxos is a wait-free, linearizable, multi-writer multi-reader register in unreliable, asynchronous networks supporting arbitrary update operations including compare-and-set (CAS). The register acts as a replicated state machine providing an interface for changing its value by applying an arbitrary user-provided function (a command). Unlike Multi-Paxos and Raft which replicate the log of commands, CASPaxos replicates state, thus avoiding associated complexity, reducing write amplification, increasing concurrency of disk operations and hardware utilization.
+    
 The paper describes CASPaxos, proves its safety properties and evaluates the characteristics of a CASPaxos-based prototype of key-value storage.
 
 ## Paper

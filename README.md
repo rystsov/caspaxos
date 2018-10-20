@@ -14,6 +14,7 @@ The algorithm is new so most implementations are actively being developed.
 
  * https://github.com/gryadka/js
  * https://github.com/peterbourgon/caspaxos
+ * https://github.com/spacejam/sled/tree/master/crates/paxos
  * https://github.com/ericentin/caspax
  * https://github.com/ReubenBond/orleans/tree/poc-caspaxos
  * https://github.com/komuw/kshaka
